@@ -72,13 +72,17 @@ The config file is generated automatically on launch with help comments explaini
   "blocks_per_level": 500,
   "cross_dimension_cost": 15,
   "warmup_seconds": 3,
-  "cooldown_seconds": 0
+  "cooldown_seconds": 0,
+  "show_ops_on_leaderboard": false
 }
 ```
 
 ---
 
 ## 💬 Commands Reference
+
+### XP Leaderboard
+*   **`/xp leaderboard`** *(alias: `/xpteleport leaderboard`)*: Displays a chat leaderboard showing the top 10 players on the server ranked by total experience points. (By default, OP players are hidden unless `"show_ops_on_leaderboard": true` is enabled in configuration).
 
 ### XP Trading
 *   **`/xpgive <player> <levels>`** *(alias: `/xpg`)*: Gives XP levels from your bar to another player. (OPs can give infinite levels without losing XP).

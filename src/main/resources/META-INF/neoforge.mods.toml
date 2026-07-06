@@ -1,0 +1,17 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+
+[[mods]]
+modId="xpteleport"
+version="1.0.0"
+displayName="XPTeleport"
+authors="Matnepp"
+description="Distance-based XP teleportation mod with anti-abuse systems."
+
+[[dependencies.xpteleport]]
+modId="neoforge"
+type="required"
+versionRange="[21,)"
+ordering="NONE"
+side="BOTH"

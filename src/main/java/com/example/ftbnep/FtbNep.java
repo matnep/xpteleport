@@ -217,6 +217,9 @@ public class FtbNep {
             .then(Commands.literal("help")
                 .executes(this::executeHelp)
             )
+            .then(Commands.literal("leaderboard")
+                .executes(this::executeLeaderboard)
+            )
             .then(Commands.literal("reload")
                 .requires(source -> source.hasPermission(2))
                 .executes(context -> {
@@ -710,6 +713,13 @@ public class FtbNep {
                 )
             )
         );
+
+        // 10. XP Leaderboard Commands
+        dispatcher.register(Commands.literal("xp")
+            .then(Commands.literal("leaderboard")
+                .executes(this::executeLeaderboard)
+            )
+        );
     }
 
     private int executeSetHome(CommandContext<CommandSourceStack> context, String name) throws CommandSyntaxException {
@@ -1045,6 +1055,39 @@ public class FtbNep {
         source.sendSystemMessage(Component.literal("§7- §b/xpteleport reload §7(OP) - Reload configs"));
         source.sendSystemMessage(Component.literal("§7- §b/xpteleport change §7(OP) - Toggle auto-redirection"));
         source.sendSystemMessage(Component.literal("§6§l================================="));
+        return 1;
+    }
+
+    private int executeLeaderboard(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        net.minecraft.server.MinecraftServer server = source.getServer();
+        List<LeaderboardManager.LeaderboardEntry> list = LeaderboardManager.getLeaderboard(server);
+
+        // If cached list is empty, force an update in the current thread to populate it immediately
+        if (list.isEmpty()) {
+            LeaderboardManager.forceUpdate(server);
+            list = LeaderboardManager.getLeaderboard(server);
+        }
+
+        source.sendSystemMessage(Component.literal("§6§l=== XP Levels Leaderboard ==="));
+        if (list.isEmpty()) {
+            source.sendSystemMessage(Component.literal("§7No players found on the leaderboard yet."));
+        } else {
+            int rank = 1;
+            for (LeaderboardManager.LeaderboardEntry entry : list) {
+                String color = "§e";
+                if (rank == 1) color = "§a§l";
+                else if (rank == 2) color = "§b";
+                else if (rank == 3) color = "§7";
+                
+                String rankStr = String.format("%s%d. %s", color, rank, entry.name());
+                source.sendSystemMessage(Component.literal(
+                    String.format("%-25s §6%d levels §7(%d total XP)", rankStr, entry.levels(), entry.totalXp())
+                ));
+                rank++;
+            }
+        }
+        source.sendSystemMessage(Component.literal("§6§l============================"));
         return 1;
     }
 

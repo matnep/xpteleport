@@ -38,6 +38,7 @@ public class FtbNepConfig {
     private static int crossDimensionCost = 15;
     private static int warmupSeconds = 3;
     private static int cooldownSeconds = 0;
+    private static boolean showOpsOnLeaderboard = false;
 
     static {
         // Set defaults
@@ -129,6 +130,9 @@ public class FtbNepConfig {
                 if (json.has("cooldown_seconds")) {
                     cooldownSeconds = json.get("cooldown_seconds").getAsInt();
                 }
+                if (json.has("show_ops_on_leaderboard")) {
+                    showOpsOnLeaderboard = json.get("show_ops_on_leaderboard").getAsBoolean();
+                }
             }
             LOGGER.info("XPTeleport config loaded successfully.");
             save(); // Automatically migrate and write help comments / README
@@ -195,6 +199,9 @@ public class FtbNepConfig {
             json.addProperty("cooldown_seconds", cooldownSeconds);
             json.addProperty("_HELP_cooldown_seconds", "Delay in seconds between successful teleports. Set to 0 to disable cooldowns.");
 
+            json.addProperty("show_ops_on_leaderboard", showOpsOnLeaderboard);
+            json.addProperty("_HELP_show_ops_on_leaderboard", "Set to true to show server operators (OPs) on the XP leaderboard.");
+
             try (FileWriter writer = new FileWriter(CONFIG_FILE, StandardCharsets.UTF_8)) {
                 GSON.toJson(json, writer);
             }
@@ -203,8 +210,6 @@ public class FtbNepConfig {
             LOGGER.error("Failed to save XPTeleport config", e);
         }
     }
-
-
 
     public static int getCost(String command) {
         return costs.getOrDefault(command.toLowerCase(), 0);
@@ -280,5 +285,13 @@ public class FtbNepConfig {
 
     public static int getCooldownSeconds() {
         return cooldownSeconds;
+    }
+
+    public static boolean isShowOpsOnLeaderboard() {
+        return showOpsOnLeaderboard;
+    }
+
+    public static void setShowOpsOnLeaderboard(boolean value) {
+        showOpsOnLeaderboard = value;
     }
 }

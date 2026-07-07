@@ -210,7 +210,10 @@ public class Xptp {
         dispatcher.register(Commands.literal("xpteleport")
             .then(Commands.literal("info")
                 .executes(context -> {
-                    context.getSource().sendSuccess(() -> Component.literal("§aThis mod is created by §bMatnepp §afrom §dBurhan Bistro <3"), false);
+                    context.getSource().sendSuccess(() -> Component.literal("This mod is created by ")
+                        .append(Component.literal("Matnepp").withStyle(ChatFormatting.BOLD))
+                        .append(" from ")
+                        .append(Component.literal("Burhan Bistro <3").withStyle(ChatFormatting.BOLD)), false);
                     return 1;
                 })
             )

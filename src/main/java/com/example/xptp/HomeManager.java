@@ -2,6 +2,8 @@ package com.example.xptp;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
@@ -33,27 +35,43 @@ public class HomeManager {
         return path;
     }
 
-    public static Map<String, TeleportLocation> getHomes(MinecraftServer server, UUID uuid) {
+    public static PlayerHomeData getHomesData(MinecraftServer server, UUID uuid) {
         Path file = getHomesDir(server).resolve(uuid.toString() + ".json");
         if (!Files.exists(file)) {
-            return new HashMap<>();
+            return new PlayerHomeData();
         }
         try (FileReader reader = new FileReader(file.toFile(), StandardCharsets.UTF_8)) {
-            Map<String, TeleportLocation> map = GSON.fromJson(reader, MAP_TYPE);
-            return map != null ? map : new HashMap<>();
+            JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+            if (json.has("homes") && json.has("extraHomeSlots")) {
+                return GSON.fromJson(json, PlayerHomeData.class);
+            } else {
+                // Migrate legacy Map<String, TeleportLocation>
+                Map<String, TeleportLocation> map = GSON.fromJson(json, MAP_TYPE);
+                return new PlayerHomeData(map != null ? map : new HashMap<>(), 0);
+            }
         } catch (Exception e) {
             e.printStackTrace();
-            return new HashMap<>();
+            return new PlayerHomeData();
         }
     }
 
-    public static void saveHomes(MinecraftServer server, UUID uuid, Map<String, TeleportLocation> homes) {
+    public static void saveHomesData(MinecraftServer server, UUID uuid, PlayerHomeData data) {
         Path file = getHomesDir(server).resolve(uuid.toString() + ".json");
         try (FileWriter writer = new FileWriter(file.toFile(), StandardCharsets.UTF_8)) {
-            GSON.toJson(homes, MAP_TYPE, writer);
+            GSON.toJson(data, PlayerHomeData.class, writer);
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public static Map<String, TeleportLocation> getHomes(MinecraftServer server, UUID uuid) {
+        return getHomesData(server, uuid).getHomes();
+    }
+
+    public static void saveHomes(MinecraftServer server, UUID uuid, Map<String, TeleportLocation> homes) {
+        PlayerHomeData data = getHomesData(server, uuid);
+        data.setHomes(homes);
+        saveHomesData(server, uuid, data);
     }
 
     private static void LOGGER_ERROR(Exception e) {

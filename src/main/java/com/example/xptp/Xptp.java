@@ -49,6 +49,9 @@ public class Xptp {
     // Cache for pending Xaero Map teleports
     private static final Map<UUID, PendingXaeroTeleport> pendingXaeroTeleports = new ConcurrentHashMap<>();
 
+    // Set of active RTP searches to prevent spamming while chunks load asynchronously
+    private static final Set<UUID> activeRtpSearches = ConcurrentHashMap.newKeySet();
+
     public Xptp(IEventBus modEventBus) {
         LOGGER.info("Initializing Standalone FTB Essentials Replacement (xptp)...");
         
@@ -507,12 +510,14 @@ public class Xptp {
             .requires(source -> source.isPlayer())
             .executes(context -> {
                 ServerPlayer player = context.getSource().getPlayerOrException();
-                Map<String, TeleportLocation> homes = HomeManager.getHomes(player.server, player.getUUID());
+                PlayerHomeData homeData = HomeManager.getHomesData(player.server, player.getUUID());
+                Map<String, TeleportLocation> homes = homeData.getHomes();
+                int maxAllowed = XptpConfig.getMaxHomes() + homeData.getExtraHomeSlots();
                 if (homes.isEmpty()) {
                     player.sendSystemMessage(Component.literal("§cYou have no homes set."));
                 } else {
                     String names = String.join(", ", homes.keySet());
-                    player.sendSystemMessage(Component.literal("§aYour homes (" + homes.size() + "/" + XptpConfig.getMaxHomes() + "): " + names));
+                    player.sendSystemMessage(Component.literal("§aYour homes (" + homes.size() + "/" + maxAllowed + "): " + names));
                 }
                 return 1;
             })
@@ -538,15 +543,20 @@ public class Xptp {
                 .executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
                     String name = StringArgumentType.getString(context, "name");
-                    TeleportLocation loc = WarpManager.getWarp(name);
-                    if (loc == null) {
+                    WarpInfo info = WarpManager.getWarpInfo(name);
+                    if (info == null) {
                         context.getSource().sendFailure(Component.literal("§cWarp '" + name + "' not found."));
                         return 0;
                     }
+                    TeleportLocation loc = info.getLocation();
 
                     if (!CooldownManager.checkCooldown(player)) return 0;
 
                     int cost = calculateXpCost(player, loc, false);
+                    if (info.getCreatorUuid() != null && info.getCreatorUuid().equals(player.getUUID().toString())) {
+                        cost = (int) Math.round(cost * XptpConfig.getCreatorWarpCostMultiplier());
+                    }
+
                     if (player.experienceLevel < cost) {
                         context.getSource().sendFailure(Component.literal(
                             String.format(XptpConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
@@ -567,10 +577,30 @@ public class Xptp {
         );
 
         dispatcher.register(Commands.literal("delwarp")
-            .requires(source -> source.hasPermission(2))
             .then(Commands.argument("name", StringArgumentType.string())
                 .executes(context -> {
                     String name = StringArgumentType.getString(context, "name");
+                    WarpInfo info = WarpManager.getWarpInfo(name);
+                    if (info == null) {
+                        context.getSource().sendFailure(Component.literal("§cWarp '" + name + "' not found."));
+                        return 0;
+                    }
+
+                    boolean canDelete = false;
+                    try {
+                        ServerPlayer player = context.getSource().getPlayerOrException();
+                        if (player.hasPermissions(2) || (info.getCreatorUuid() != null && info.getCreatorUuid().equals(player.getUUID().toString()))) {
+                            canDelete = true;
+                        }
+                    } catch (CommandSyntaxException e) {
+                        canDelete = true;
+                    }
+
+                    if (!canDelete) {
+                        context.getSource().sendFailure(Component.literal("§cYou do not own this warp!"));
+                        return 0;
+                    }
+
                     if (WarpManager.removeWarp(name)) {
                         context.getSource().sendSuccess(() -> Component.literal("§aWarp '" + name + "' deleted successfully!"), true);
                         return 1;
@@ -586,7 +616,7 @@ public class Xptp {
             .requires(source -> source.isPlayer())
             .executes(context -> {
                 ServerPlayer player = context.getSource().getPlayerOrException();
-                Map<String, TeleportLocation> warps = WarpManager.getWarps();
+                Map<String, WarpInfo> warps = WarpManager.getWarps();
                 if (warps.isEmpty()) {
                     player.sendSystemMessage(Component.literal("§cNo warps set on this server."));
                 } else {
@@ -723,21 +753,38 @@ public class Xptp {
                 .executes(this::executeLeaderboard)
             )
         );
+
+        // 11. Buy Home Slot Command
+        dispatcher.register(Commands.literal("buyhome")
+            .requires(source -> source.isPlayer())
+            .executes(this::executeBuyHome)
+        );
+
+        // 12. Buy Warp Command
+        dispatcher.register(Commands.literal("buywarp")
+            .requires(source -> source.isPlayer())
+            .then(Commands.argument("name", StringArgumentType.string())
+                .executes(context -> executeBuyWarp(context, StringArgumentType.getString(context, "name")))
+            )
+        );
     }
 
     private int executeSetHome(CommandContext<CommandSourceStack> context, String name) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
-        Map<String, TeleportLocation> homes = HomeManager.getHomes(player.server, player.getUUID());
+        PlayerHomeData homeData = HomeManager.getHomesData(player.server, player.getUUID());
+        Map<String, TeleportLocation> homes = homeData.getHomes();
+        int maxAllowed = XptpConfig.getMaxHomes() + homeData.getExtraHomeSlots();
 
-        if (homes.size() >= XptpConfig.getMaxHomes() && !homes.containsKey(name.toLowerCase())) {
+        if (homes.size() >= maxAllowed && !homes.containsKey(name.toLowerCase())) {
             context.getSource().sendFailure(Component.literal(
-                "§cYou cannot set any more homes! (Limit: " + XptpConfig.getMaxHomes() + ")"
+                "§cYou cannot set any more homes! (Limit: " + maxAllowed + ")"
             ));
             return 0;
         }
 
         homes.put(name.toLowerCase(), TeleportLocation.of(player));
-        HomeManager.saveHomes(player.server, player.getUUID(), homes);
+        homeData.setHomes(homes);
+        HomeManager.saveHomesData(player.server, player.getUUID(), homeData);
         player.sendSystemMessage(Component.literal("§aHome '" + name + "' set successfully."));
         return 1;
     }
@@ -799,6 +846,11 @@ public class Xptp {
             return 0;
         }
 
+        if (activeRtpSearches.contains(player.getUUID())) {
+            context.getSource().sendFailure(Component.literal("§cYou are already searching for a safe location!"));
+            return 0;
+        }
+
         ServerLevel level = player.serverLevel();
         BlockPos spawn = level.getSharedSpawnPos();
         int rtpMin = XptpConfig.getRtpMinRange();
@@ -806,47 +858,149 @@ public class Xptp {
         net.minecraft.world.level.border.WorldBorder border = level.getWorldBorder();
 
         player.sendSystemMessage(Component.literal("§dLooking for safe location..."));
+        activeRtpSearches.add(player.getUUID());
 
-        int attempts = 0;
-        BlockPos targetPos = null;
-        while (attempts < 3) {
-            double distance = rtpMin + RANDOM.nextDouble() * (rtpMax - rtpMin);
-            double angle = RANDOM.nextDouble() * Math.PI * 2;
-            double rx = spawn.getX() + Math.cos(angle) * distance;
-            double rz = spawn.getZ() + Math.sin(angle) * distance;
+        findRandomSafeLocationAsync(player, level, spawn, rtpMin, rtpMax, border, cost, 0);
+        return 1;
+    }
 
-            // Clamp coordinates inside the active World Border
-            rx = Math.max(border.getMinX() + 16, Math.min(border.getMaxX() - 16, rx));
-            rz = Math.max(border.getMinZ() + 16, Math.min(border.getMaxZ() - 16, rz));
-
-            int ry = level.getHeight(Heightmap.Types.MOTION_BLOCKING, (int) rx, (int) rz);
-            BlockPos pos = new BlockPos((int) rx, ry, (int) rz);
-            
-            BlockState below = level.getBlockState(pos.below());
-            BlockState inside = level.getBlockState(pos);
-            BlockState above = level.getBlockState(pos.above());
-
-            // Check for safe blocks (not lava, not source fluid, has air space)
-            if (!below.isAir() && below.getFluidState().isEmpty() && inside.isAir() && above.isAir()) {
-                targetPos = pos;
-                break;
-            }
-            attempts++;
+    private void findRandomSafeLocationAsync(ServerPlayer player, ServerLevel level, BlockPos spawn, int rtpMin, int rtpMax, net.minecraft.world.level.border.WorldBorder border, int cost, int attempt) {
+        if (!player.isAlive() || player.hasDisconnected()) {
+            activeRtpSearches.remove(player.getUUID());
+            return;
         }
 
-        if (targetPos == null) {
-            context.getSource().sendFailure(Component.literal("§cCould not find a safe location to teleport to! Try again."));
+        double distance = rtpMin + RANDOM.nextDouble() * (rtpMax - rtpMin);
+        double angle = RANDOM.nextDouble() * Math.PI * 2;
+        double rx = spawn.getX() + Math.cos(angle) * distance;
+        double rz = spawn.getZ() + Math.sin(angle) * distance;
+
+        // Clamp coordinates inside the active World Border
+        final double finalRx = Math.max(border.getMinX() + 16, Math.min(border.getMaxX() - 16, rx));
+        final double finalRz = Math.max(border.getMinZ() + 16, Math.min(border.getMaxZ() - 16, rz));
+
+        int chunkX = ((int) finalRx) >> 4;
+        int chunkZ = ((int) finalRz) >> 4;
+
+        level.getChunkSource().getChunkFuture(chunkX, chunkZ, net.minecraft.world.level.chunk.status.ChunkStatus.FULL, true)
+            .thenAcceptAsync(chunkResult -> {
+                net.minecraft.world.level.chunk.ChunkAccess chunk = chunkResult.orElse(null);
+                if (chunk != null) {
+                    int ry = level.getHeight(Heightmap.Types.MOTION_BLOCKING, (int) finalRx, (int) finalRz);
+                    BlockPos pos = new BlockPos((int) finalRx, ry, (int) finalRz);
+
+                    BlockState below = level.getBlockState(pos.below());
+                    BlockState inside = level.getBlockState(pos);
+                    BlockState above = level.getBlockState(pos.above());
+
+                    if (isSafeLocation(below, inside, above)) {
+                        activeRtpSearches.remove(player.getUUID());
+                        TeleportLocation dest = new TeleportLocation(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, player.getYRot(), player.getXRot(), level.dimension().location().toString());
+                        
+                        if (player.hasPermissions(2)) {
+                            BackManager.record(player);
+                            dest.teleport(player);
+                            player.sendSystemMessage(Component.literal("§aTeleported!"), true);
+                        } else {
+                            WarmupManager.startWarmup(player, dest, cost);
+                        }
+                    } else {
+                        int maxAttempts = 15;
+                        if (attempt + 1 < maxAttempts) {
+                            findRandomSafeLocationAsync(player, level, spawn, rtpMin, rtpMax, border, cost, attempt + 1);
+                        } else {
+                            activeRtpSearches.remove(player.getUUID());
+                            player.sendSystemMessage(Component.literal("§cCould not find a safe location after " + maxAttempts + " attempts! Try again."));
+                        }
+                    }
+                } else {
+                    int maxAttempts = 15;
+                    if (attempt + 1 < maxAttempts) {
+                        findRandomSafeLocationAsync(player, level, spawn, rtpMin, rtpMax, border, cost, attempt + 1);
+                    } else {
+                        activeRtpSearches.remove(player.getUUID());
+                        player.sendSystemMessage(Component.literal("§cCould not load chunks for safe location search. Try again."));
+                    }
+                }
+            }, level.getServer());
+    }
+
+    private boolean isSafeLocation(BlockState below, BlockState inside, BlockState above) {
+        if (below.isAir() || !below.getFluidState().isEmpty()) {
+            return false;
+        }
+
+        net.minecraft.world.level.block.Block belowBlock = below.getBlock();
+        if (belowBlock == net.minecraft.world.level.block.Blocks.LAVA || 
+            belowBlock == net.minecraft.world.level.block.Blocks.WATER ||
+            belowBlock == net.minecraft.world.level.block.Blocks.MAGMA_BLOCK ||
+            belowBlock == net.minecraft.world.level.block.Blocks.CACTUS ||
+            belowBlock == net.minecraft.world.level.block.Blocks.FIRE ||
+            belowBlock == net.minecraft.world.level.block.Blocks.SOUL_FIRE) {
+            return false;
+        }
+
+        return inside.isAir() && above.isAir();
+    }
+
+    private int executeBuyHome(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        PlayerHomeData homeData = HomeManager.getHomesData(player.server, player.getUUID());
+        int extraSlots = homeData.getExtraHomeSlots();
+        int maxExtra = XptpConfig.getMaxExtraHomeSlots();
+
+        if (extraSlots >= maxExtra) {
+            context.getSource().sendFailure(Component.literal("§cYou have already purchased the maximum number of extra home slots (" + maxExtra + ")."));
             return 0;
         }
 
-        TeleportLocation dest = new TeleportLocation(targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5, player.getYRot(), player.getXRot(), level.dimension().location().toString());
-        if (player.hasPermissions(2)) {
-            BackManager.record(player);
-            dest.teleport(player);
-            player.sendSystemMessage(Component.literal("§aTeleported!"), true);
-        } else {
-            WarmupManager.startWarmup(player, dest, cost);
+        int baseCost = XptpConfig.getBuyHomeSlotCost();
+        double mult = XptpConfig.getBuyHomeSlotMultiplier();
+        double globalMult = XptpConfig.getGlobalCostMultiplier();
+        int cost = (int) Math.round(baseCost * Math.pow(mult, extraSlots) * globalMult);
+
+        boolean isOp = player.hasPermissions(2);
+        if (!isOp && player.experienceLevel < cost) {
+            context.getSource().sendFailure(Component.literal("§cYou do not have enough XP levels! (Cost: " + cost + " levels, Current: " + player.experienceLevel + " levels)"));
+            return 0;
         }
+
+        if (!isOp) {
+            player.giveExperienceLevels(-cost);
+        }
+
+        homeData.setExtraHomeSlots(extraSlots + 1);
+        HomeManager.saveHomesData(player.server, player.getUUID(), homeData);
+
+        int totalLimit = XptpConfig.getMaxHomes() + homeData.getExtraHomeSlots();
+        player.sendSystemMessage(Component.literal("§aSuccessfully purchased 1 extra home slot! Your new limit is " + totalLimit + " homes."));
+        return 1;
+    }
+
+    private int executeBuyWarp(CommandContext<CommandSourceStack> context, String name) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        
+        if (WarpManager.getWarp(name) != null) {
+            context.getSource().sendFailure(Component.literal("§cWarp '" + name + "' already exists!"));
+            return 0;
+        }
+
+        int baseCost = XptpConfig.getBuyWarpCost();
+        double globalMult = XptpConfig.getGlobalCostMultiplier();
+        int cost = (int) Math.round(baseCost * globalMult);
+
+        boolean isOp = player.hasPermissions(2);
+        if (!isOp && player.experienceLevel < cost) {
+            context.getSource().sendFailure(Component.literal("§cYou do not have enough XP levels! (Cost: " + cost + " levels, Current: " + player.experienceLevel + " levels)"));
+            return 0;
+        }
+
+        if (!isOp) {
+            player.giveExperienceLevels(-cost);
+        }
+
+        WarpManager.addWarp(name, TeleportLocation.of(player), player.getUUID().toString());
+        player.sendSystemMessage(Component.literal("§aSuccessfully purchased and set global warp '" + name + "'!"));
         return 1;
     }
 

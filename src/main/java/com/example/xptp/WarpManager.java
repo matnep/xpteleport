@@ -2,6 +2,8 @@ package com.example.xptp;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,9 +20,9 @@ public class WarpManager {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final File WARP_FILE = new File("config/xpteleport/warps.json");
-    private static final Type MAP_TYPE = new TypeToken<Map<String, TeleportLocation>>() {}.getType();
+    private static final Type MAP_TYPE = new TypeToken<Map<String, WarpInfo>>() {}.getType();
 
-    private static Map<String, TeleportLocation> warps = new HashMap<>();
+    private static Map<String, WarpInfo> warps = new HashMap<>();
 
     static {
         load();
@@ -39,12 +41,25 @@ public class WarpManager {
             }
 
             try (FileReader reader = new FileReader(WARP_FILE, StandardCharsets.UTF_8)) {
-                Map<String, TeleportLocation> map = GSON.fromJson(reader, MAP_TYPE);
-                warps = map != null ? map : new HashMap<>();
+                JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+                Map<String, WarpInfo> parsedWarps = new HashMap<>();
+                for (Map.Entry<String, com.google.gson.JsonElement> entry : json.entrySet()) {
+                    String warpName = entry.getKey().toLowerCase();
+                    JsonObject obj = entry.getValue().getAsJsonObject();
+                    if (obj.has("location")) {
+                        WarpInfo warpInfo = GSON.fromJson(obj, WarpInfo.class);
+                        parsedWarps.put(warpName, warpInfo);
+                    } else {
+                        // Migrate legacy TeleportLocation directly
+                        TeleportLocation loc = GSON.fromJson(obj, TeleportLocation.class);
+                        parsedWarps.put(warpName, new WarpInfo(loc, null));
+                    }
+                }
+                warps = parsedWarps;
             }
-            LOGGER.info("FTBNep warps loaded successfully. Total warps: {}", warps.size());
+            LOGGER.info("Xptp warps loaded successfully. Total warps: {}", warps.size());
         } catch (Exception e) {
-            LOGGER.error("Failed to load FTBNep warps", e);
+            LOGGER.error("Failed to load Xptp warps", e);
         }
     }
 
@@ -59,20 +74,29 @@ public class WarpManager {
                 GSON.toJson(warps, MAP_TYPE, writer);
             }
         } catch (Exception e) {
-            LOGGER.error("Failed to save FTBNep warps", e);
+            LOGGER.error("Failed to save Xptp warps", e);
         }
     }
 
-    public static Map<String, TeleportLocation> getWarps() {
+    public static Map<String, WarpInfo> getWarps() {
         return warps;
     }
 
     public static TeleportLocation getWarp(String name) {
+        WarpInfo info = warps.get(name.toLowerCase());
+        return info != null ? info.getLocation() : null;
+    }
+
+    public static WarpInfo getWarpInfo(String name) {
         return warps.get(name.toLowerCase());
     }
 
     public static void addWarp(String name, TeleportLocation loc) {
-        warps.put(name.toLowerCase(), loc);
+        addWarp(name, loc, null);
+    }
+
+    public static void addWarp(String name, TeleportLocation loc, String creatorUuid) {
+        warps.put(name.toLowerCase(), new WarpInfo(loc, creatorUuid));
         save();
     }
 

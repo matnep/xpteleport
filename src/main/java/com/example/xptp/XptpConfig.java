@@ -24,8 +24,14 @@ public class XptpConfig {
     private static String xpDeductedMessage = "§aTeleportation successful! Deducted %s XP levels.";
     private static String confirmPromptMessage = "§eYou are about to teleport to [%s, %s, %s] for %s XP levels.";
     
+    private static double globalCostMultiplier = 1.0;
     private static boolean redirectTpToXtp = true;
     private static int maxHomes = 5;
+    private static int buyHomeSlotCost = 15;
+    private static double buyHomeSlotMultiplier = 1.0;
+    private static int maxExtraHomeSlots = 5;
+    private static int buyWarpCost = 50;
+    private static double creatorWarpCostMultiplier = 0.0;
     private static int rtpMinRange = 50;
     private static int rtpMaxRange = 500;
 
@@ -94,8 +100,26 @@ public class XptpConfig {
                     redirectTpToXtp = json.get("redirect_tp_to_ftbtp").getAsBoolean();
                 }
 
+                if (json.has("global_cost_multiplier")) {
+                    globalCostMultiplier = json.get("global_cost_multiplier").getAsDouble();
+                }
                 if (json.has("max_homes")) {
                     maxHomes = json.get("max_homes").getAsInt();
+                }
+                if (json.has("buy_home_slot_cost")) {
+                    buyHomeSlotCost = json.get("buy_home_slot_cost").getAsInt();
+                }
+                if (json.has("buy_home_slot_multiplier")) {
+                    buyHomeSlotMultiplier = json.get("buy_home_slot_multiplier").getAsDouble();
+                }
+                if (json.has("max_extra_home_slots")) {
+                    maxExtraHomeSlots = json.get("max_extra_home_slots").getAsInt();
+                }
+                if (json.has("buy_warp_cost")) {
+                    buyWarpCost = json.get("buy_warp_cost").getAsInt();
+                }
+                if (json.has("creator_warp_cost_multiplier")) {
+                    creatorWarpCostMultiplier = json.get("creator_warp_cost_multiplier").getAsDouble();
                 }
                 if (json.has("rtp_min_range")) {
                     rtpMinRange = json.get("rtp_min_range").getAsInt();
@@ -147,60 +171,75 @@ public class XptpConfig {
         try {
             JsonObject json = new JsonObject();
             
-            // Inline helpful header comments
-            json.addProperty("_HELP_HEADER", "=== XPTELEPORT MOD CONFIGURATION GUIDE ===");
-            json.addProperty("_HELP_INFO_1", "Modify values here to change teleport costs and rules.");
-            json.addProperty("_HELP_INFO_2", "Run '/xpteleport reload' in game to apply changes instantly!");
+            json.addProperty("//_global_cost_multiplier", "Master scale factor for all XP costs (teleports and buys). 2.0 = double, 0.5 = half.");
+            json.addProperty("global_cost_multiplier", globalCostMultiplier);
 
             JsonObject costsObj = new JsonObject();
             for (Map.Entry<String, Integer> entry : costs.entrySet()) {
                 costsObj.addProperty(entry.getKey(), entry.getValue());
             }
+            json.addProperty("//_costs", "Flat rates (in XP levels) charged for commands when distance_based_xp is set to false.");
             json.add("costs", costsObj);
 
             JsonObject msgsObj = new JsonObject();
             msgsObj.addProperty("insufficient_xp", insufficientXpMessage);
             msgsObj.addProperty("xp_deducted", xpDeductedMessage);
             msgsObj.addProperty("confirm_prompt", confirmPromptMessage);
+            json.addProperty("//_messages", "Customizable chat translation strings.");
             json.add("messages", msgsObj);
 
+            json.addProperty("//_redirect_tp_to_xtp", "Redirects non-OP /tp coordinate clicks to map confirm dialog.");
             json.addProperty("redirect_tp_to_xtp", redirectTpToXtp);
-            json.addProperty("_HELP_redirect_tp_to_xtp", "Redirects non-OP /tp coordinate clicks to map confirm dialog.");
             
+            json.addProperty("//_max_homes", "Default home slots limit a player starts with before upgrades.");
             json.addProperty("max_homes", maxHomes);
-            json.addProperty("_HELP_max_homes", "Maximum homes a player can set (e.g. 5).");
             
+            json.addProperty("//_buy_home_slot_cost", "Base XP cost to purchase 1 extra home slot above starting limit.");
+            json.addProperty("buy_home_slot_cost", buyHomeSlotCost);
+            
+            json.addProperty("//_buy_home_slot_multiplier", "Multiplier for subsequent home slot purchases (e.g. 1.5). Set to 1.0 for flat price.");
+            json.addProperty("buy_home_slot_multiplier", buyHomeSlotMultiplier);
+            
+            json.addProperty("//_max_extra_home_slots", "Max extra home slots a player can buy.");
+            json.addProperty("max_extra_home_slots", maxExtraHomeSlots);
+            
+            json.addProperty("//_buy_warp_cost", "XP cost for players to buy a global warp. Only the creator or OPs can delete it.");
+            json.addProperty("buy_warp_cost", buyWarpCost);
+            
+            json.addProperty("//_creator_warp_cost_multiplier", "Cost multiplier applied when teleporting to a warp you created. Set to 0.0 for free of charge, or 0.5 for half price.");
+            json.addProperty("creator_warp_cost_multiplier", creatorWarpCostMultiplier);
+            
+            json.addProperty("//_rtp_range", "Minimum and maximum block radius search range around spawn on /rtp.");
             json.addProperty("rtp_min_range", rtpMinRange);
             json.addProperty("rtp_max_range", rtpMaxRange);
-            json.addProperty("_HELP_rtp_range", "Minimum and maximum block radius around spawn to search for landing on /rtp.");
 
+            json.addProperty("//_distance_based_xp", "Calculate XP cost dynamically based on distance. If false, falls back to flat rates in 'costs'.");
             json.addProperty("distance_based_xp", distanceBasedXp);
-            json.addProperty("_HELP_distance_based_xp", "Calculate XP cost dynamically based on distance. If false, falls back to flat rates in 'costs'.");
             
+            json.addProperty("//_use_logarithmic_cost", "Use logarithmic distance scaling. If true, uses logarithmic formula (100 blocks = 5 levels). If false, uses blocks_per_level.");
             json.addProperty("use_logarithmic_cost", useLogarithmicCost);
-            json.addProperty("_HELP_use_logarithmic_cost", "Use logarithmic distance scaling. If true, uses logarithmic formula (100 blocks = 5 levels). If false, uses blocks_per_level.");
             
+            json.addProperty("//_log_formula", "Formula parameters: cost = base + multiplier * ln(distance). Calibrated to 100 blocks = 5 levels.");
             json.addProperty("base_teleport_cost", baseTeleportCost);
             json.addProperty("log_multiplier", logMultiplier);
-            json.addProperty("_HELP_log_formula", "Formula: cost = base + multiplier * ln(distance). Default (-19.3, 5.28) forces 100 blocks = 5 levels, capping at 30 levels.");
             
+            json.addProperty("//_xaero_multiplier", "Cost multiplier applied to Xaero map clicks and shared chat waypoints (e.g. 3.0 = triple cost).");
             json.addProperty("xaero_multiplier", xaeroMultiplier);
-            json.addProperty("_HELP_xaero_multiplier", "Cost multiplier applied to Xaero map clicks and shared chat waypoints (e.g. 3.0 = triple cost).");
             
+            json.addProperty("//_blocks_per_level", "Linear cost scaling divisor (used if use_logarithmic_cost is false).");
             json.addProperty("blocks_per_level", blocksPerLevel);
-            json.addProperty("_HELP_blocks_per_level", "Linear cost scaling divisor (used if use_logarithmic_cost is false).");
             
+            json.addProperty("//_cross_dimension_cost", "Flat XP level cost charged for teleports across dimensions.");
             json.addProperty("cross_dimension_cost", crossDimensionCost);
-            json.addProperty("_HELP_cross_dimension_cost", "Flat XP level cost charged for teleports across dimensions.");
             
+            json.addProperty("//_warmup_seconds", "Delay in seconds where a player must stand still and take no damage before teleporting.");
             json.addProperty("warmup_seconds", warmupSeconds);
-            json.addProperty("_HELP_warmup_seconds", "Delay in seconds where a player must stand still and take no damage before teleporting.");
             
+            json.addProperty("//_cooldown_seconds", "Delay in seconds between successful teleports. Set to 0 to disable cooldowns.");
             json.addProperty("cooldown_seconds", cooldownSeconds);
-            json.addProperty("_HELP_cooldown_seconds", "Delay in seconds between successful teleports. Set to 0 to disable cooldowns.");
 
+            json.addProperty("//_show_ops_on_leaderboard", "Set to true to show server operators (OPs) on the XP leaderboard.");
             json.addProperty("show_ops_on_leaderboard", showOpsOnLeaderboard);
-            json.addProperty("_HELP_show_ops_on_leaderboard", "Set to true to show server operators (OPs) on the XP leaderboard.");
 
             try (FileWriter writer = new FileWriter(CONFIG_FILE, StandardCharsets.UTF_8)) {
                 GSON.toJson(json, writer);
@@ -212,11 +251,35 @@ public class XptpConfig {
     }
 
     public static int getCost(String command) {
-        return costs.getOrDefault(command.toLowerCase(), 0);
+        return (int) Math.round(costs.getOrDefault(command.toLowerCase(), 0) * globalCostMultiplier);
     }
 
     public static int getXaeroTpCost() {
-        return costs.getOrDefault("xaero_tp", 30);
+        return (int) Math.round(costs.getOrDefault("xaero_tp", 30) * globalCostMultiplier);
+    }
+
+    public static double getGlobalCostMultiplier() {
+        return globalCostMultiplier;
+    }
+
+    public static int getBuyHomeSlotCost() {
+        return buyHomeSlotCost;
+    }
+
+    public static double getBuyHomeSlotMultiplier() {
+        return buyHomeSlotMultiplier;
+    }
+
+    public static int getMaxExtraHomeSlots() {
+        return maxExtraHomeSlots;
+    }
+
+    public static int getBuyWarpCost() {
+        return buyWarpCost;
+    }
+
+    public static double getCreatorWarpCostMultiplier() {
+        return creatorWarpCostMultiplier;
     }
 
     public static String getInsufficientXpMessage() {

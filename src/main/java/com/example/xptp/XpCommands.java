@@ -65,13 +65,6 @@ public class XpCommands {
                 )
             )
         );
-
-        // 3. xp leaderboard
-        dispatcher.register(Commands.literal("xp")
-            .then(Commands.literal("leaderboard")
-                .executes(XpCommands::executeLeaderboard)
-            )
-        );
     }
 
     private static int executeXpGive(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
@@ -182,7 +175,7 @@ public class XpCommands {
         return 1;
     }
 
-    private static int executeLeaderboard(CommandContext<CommandSourceStack> context) {
+    public static int executeLeaderboard(CommandContext<CommandSourceStack> context) {
         CommandSourceStack source = context.getSource();
         net.minecraft.server.MinecraftServer server = source.getServer();
         List<LeaderboardManager.LeaderboardEntry> list = LeaderboardManager.getLeaderboard(server);

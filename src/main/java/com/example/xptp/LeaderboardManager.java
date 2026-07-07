@@ -135,11 +135,11 @@ public class LeaderboardManager {
             filtered.add(entry);
         }
 
-        // Sort by total XP descending, then levels, then name
+        // Sort by levels descending, then total XP, then name
         filtered.sort((a, b) -> {
-            int cmp = Integer.compare(b.totalXp(), a.totalXp());
+            int cmp = Integer.compare(b.levels(), a.levels());
             if (cmp != 0) return cmp;
-            cmp = Integer.compare(b.levels(), a.levels());
+            cmp = Integer.compare(b.totalXp(), a.totalXp());
             if (cmp != 0) return cmp;
             return a.name().compareToIgnoreCase(b.name());
         });

@@ -34,6 +34,9 @@ public class AdminCommands {
                     return 1;
                 })
             )
+            .then(Commands.literal("leaderboard")
+                .executes(XpCommands::executeLeaderboard)
+            )
             .then(Commands.literal("help")
                 .executes(AdminCommands::executeHelp)
             )
@@ -59,6 +62,7 @@ public class AdminCommands {
         source.sendSystemMessage(Component.literal("§7- §6/rtp §7(alias: §6/wild§7) - Async safe random teleport"));
         source.sendSystemMessage(Component.literal("§6Administration:"));
         source.sendSystemMessage(Component.literal("§7- §6/xpteleport info §7- Credits"));
+        source.sendSystemMessage(Component.literal("§7- §6/xpteleport leaderboard §7- XP levels leaderboard"));
         source.sendSystemMessage(Component.literal("§7- §6/xpteleport reload §7(OP) - Reload configs"));
         source.sendSystemMessage(Component.literal("§7- §6/xpteleport change §7(OP) - Toggle auto-redirection"));
         source.sendSystemMessage(Component.literal("§6§l================================="));

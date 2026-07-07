@@ -4,6 +4,32 @@ All notable changes to the **XPTeleport** mod will be documented in this file.
 
 ---
 
+## [1.0.1] - 2026-07-07
+
+This release introduces major updates to the experience economy, command permissions, config file formatting, code naming conventions, and fixes critical issues with safe RTP (Random Teleport).
+
+### Added
+- **XP-Based Home Slot Purchasing:** Added the `/buyhome` command. Players can spend XP levels to buy additional home slots up to a limit. Configured by:
+  - `buy_home_slot_cost`: Base XP level cost to buy an extra slot.
+  - `buy_home_slot_multiplier`: Multiplier for subsequent slot purchases (e.g. 1.5 increases price exponentially).
+  - `max_extra_home_slots`: Maximum slots a player can buy.
+- **XP-Based Community Warp Creation:** Added the `/buywarp <name>` command. Standard players can spend a premium cost of XP levels to create a global warp.
+  - Creator's UUID is stored with the warp.
+  - Only the creator (or server Operators) can delete it via `/delwarp`.
+- **Warp Creator Discount:** Added `creator_warp_cost_multiplier` config setting. Warp creators get discounted or free-of-charge access to their own warps (defaults to `0.0` = free).
+- **Master XP Scale Modifier:** Added `global_cost_multiplier` config setting. Allows server administrators to scale all teleport costs and purchase costs globally (e.g., set to 2.0 to double, 0.5 to halve).
+- **User-Friendly Inline Configuration Comments:** The config file `config/xpteleport.json` now places documentation comments (prefixed with `//_`) directly **above** their corresponding option keys instead of on the same line or in separate files, making it extremely easy to read.
+
+### Changed
+- **Lag-Free Asynchronous Safe RTP Redesign:** 
+  - Redesigned `/rtp` (or `/wild`) to load chunks asynchronously using Mojang's background worker threads (`getChunkFuture(...)`).
+  - Solved the issue where RTP checks failed on unloaded chunks due to Y coordinates returning bottom of the world Y=-64.
+  - Increased random location search count from 3 to **15 attempts** safely without blocking the server main thread.
+  - Implemented a safe land checks validator verifying solid ground and 2 blocks of air headspace while avoiding danger blocks (lava, water, fire, magma, cactus).
+- **Branding Refactoring:** Completed the package and class rename from the legacy `FtbNep` to the new `Xptp` branding package `com.example.xptp` across the entire codebase.
+
+---
+
 ## [1.0.0-beta] - 2026-07-07
 
 This is the initial beta release of **XPTeleport**, a 100% standalone, server-side teleportation mod for **NeoForge 1.21.1**. It serves as a complete replacement for standard essentials teleportation mods (like FTB Essentials), running completely on the server side so vanilla clients can connect without any mod installations.

@@ -4,6 +4,22 @@ All notable changes to the **XPTeleport** mod will be documented in this file.
 
 ---
 
+## [1.1.1] - 2026-07-08
+
+This release updates the command interface colors, modifies the XP leaderboard to sort by experience levels, adds branding adjustments, and updates the compiled jar file naming pattern.
+
+### Added
+- **Dynamic Jar Naming:** Configured the build process to include the mod version in the output jar file name (e.g. `xpteleport-1.1.1.jar`).
+
+### Changed / Fixed
+- **Gold Formatting Theme:** Changed all command helper headings, active messages, and rankings from pink (`§d`) and aqua (`§b`) to gold (`§6`).
+- **XP Leaderboard Improvements:**
+  - Integrated the leaderboard directly under `/xpteleport leaderboard` (removing the separate `/xp leaderboard` command).
+  - Modified the sorting algorithm to prioritize experience levels over total accumulated XP points.
+- **Branding Enhancements:** Replaced legacy implementation details in the `/xpteleport info` command with a clean Bistro credits string, and removed all remaining FTB Essentials code references.
+
+---
+
 ## [1.1.0] - 2026-07-07
 
 This release introduces critical stability enhancements, thread safety concurrency updates, atomic file I/O to prevent config and player data corruption, parameter validation limits, configurable timeouts, and splits the god class `Xptp.java` into modular command registrations.

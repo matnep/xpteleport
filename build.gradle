@@ -43,5 +43,5 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.named('jar') {
-    archiveFileName = 'xpteleport.jar'
+    archiveFileName = "xpteleport-${project.mod_version}.jar"
 }

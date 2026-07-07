@@ -46,6 +46,11 @@ public class XptpConfig {
     private static int cooldownSeconds = 0;
     private static boolean showOpsOnLeaderboard = false;
 
+    // Timeout settings (in seconds)
+    private static int tpaRequestTimeoutSeconds = 60;
+    private static int xaeroConfirmTimeoutSeconds = 30;
+    private static int leaderboardRefreshSeconds = 300;
+
     static {
         // Set defaults
         costs.put("tpa", 10);
@@ -157,6 +162,15 @@ public class XptpConfig {
                 if (json.has("show_ops_on_leaderboard")) {
                     showOpsOnLeaderboard = json.get("show_ops_on_leaderboard").getAsBoolean();
                 }
+                if (json.has("tpa_request_timeout_seconds")) {
+                    tpaRequestTimeoutSeconds = json.get("tpa_request_timeout_seconds").getAsInt();
+                }
+                if (json.has("xaero_confirm_timeout_seconds")) {
+                    xaeroConfirmTimeoutSeconds = json.get("xaero_confirm_timeout_seconds").getAsInt();
+                }
+                if (json.has("leaderboard_refresh_seconds")) {
+                    leaderboardRefreshSeconds = json.get("leaderboard_refresh_seconds").getAsInt();
+                }
             }
             LOGGER.info("XPTeleport config loaded successfully.");
             save(); // Automatically migrate and write help comments / README
@@ -241,9 +255,34 @@ public class XptpConfig {
             json.addProperty("//_show_ops_on_leaderboard", "Set to true to show server operators (OPs) on the XP leaderboard.");
             json.addProperty("show_ops_on_leaderboard", showOpsOnLeaderboard);
 
-            try (FileWriter writer = new FileWriter(CONFIG_FILE, StandardCharsets.UTF_8)) {
+            json.addProperty("//_tpa_request_timeout_seconds", "Time in seconds before a pending TPA request expires.");
+            json.addProperty("tpa_request_timeout_seconds", tpaRequestTimeoutSeconds);
+
+            json.addProperty("//_xaero_confirm_timeout_seconds", "Time in seconds before a pending Xaero coordinate teleport confirmation expires.");
+            json.addProperty("xaero_confirm_timeout_seconds", xaeroConfirmTimeoutSeconds);
+
+            json.addProperty("//_leaderboard_refresh_seconds", "Time in seconds between automatic background refreshes of the XP leaderboard.");
+            json.addProperty("leaderboard_refresh_seconds", leaderboardRefreshSeconds);
+
+            java.nio.file.Path targetPath = CONFIG_FILE.toPath();
+            java.nio.file.Path tempPath = targetPath.resolveSibling(targetPath.getFileName() + ".tmp");
+            java.io.File tempFile = tempPath.toFile();
+            
+            java.io.File parent = tempFile.getParentFile();
+            if (parent != null && !parent.exists()) {
+                parent.mkdirs();
+            }
+
+            try (java.io.FileWriter writer = new java.io.FileWriter(tempFile, java.nio.charset.StandardCharsets.UTF_8)) {
                 GSON.toJson(json, writer);
             }
+            
+            try {
+                java.nio.file.Files.move(tempPath, targetPath, java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                java.nio.file.Files.move(tempPath, targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+            
             LOGGER.info("XPTeleport config saved successfully.");
         } catch (Exception e) {
             LOGGER.error("Failed to save XPTeleport config", e);
@@ -356,5 +395,17 @@ public class XptpConfig {
 
     public static void setShowOpsOnLeaderboard(boolean value) {
         showOpsOnLeaderboard = value;
+    }
+
+    public static int getTpaRequestTimeoutSeconds() {
+        return tpaRequestTimeoutSeconds;
+    }
+
+    public static int getXaeroConfirmTimeoutSeconds() {
+        return xaeroConfirmTimeoutSeconds;
+    }
+
+    public static int getLeaderboardRefreshSeconds() {
+        return leaderboardRefreshSeconds;
     }
 }

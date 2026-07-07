@@ -17,7 +17,11 @@ public class WarmupManager {
     private static final Map<UUID, WarmupTask> activeWarmups = new ConcurrentHashMap<>();
 
     public static void startWarmup(ServerPlayer player, TeleportLocation destination, int xpCost) {
-        // Clear any existing warmup for the player
+        WarmupTask oldTask = activeWarmups.remove(player.getUUID());
+        if (oldTask != null) {
+            player.sendSystemMessage(Component.literal("§cTeleportation cancelled: A new teleport request was started."), false);
+            player.sendSystemMessage(Component.literal("§cTeleport cancelled!"), true);
+        }
         activeWarmups.put(player.getUUID(), new WarmupTask(player, destination, xpCost));
         player.sendSystemMessage(Component.literal("§dTeleportation initiated..."), false);
     }

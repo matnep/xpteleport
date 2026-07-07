@@ -65,13 +65,23 @@ public class WarpManager {
 
     public static void save() {
         try {
-            File parent = WARP_FILE.getParentFile();
+            java.nio.file.Path targetPath = WARP_FILE.toPath();
+            java.nio.file.Path tempPath = targetPath.resolveSibling(targetPath.getFileName() + ".tmp");
+            java.io.File tempFile = tempPath.toFile();
+
+            java.io.File parent = tempFile.getParentFile();
             if (parent != null && !parent.exists()) {
                 parent.mkdirs();
             }
 
-            try (FileWriter writer = new FileWriter(WARP_FILE, StandardCharsets.UTF_8)) {
+            try (java.io.FileWriter writer = new java.io.FileWriter(tempFile, java.nio.charset.StandardCharsets.UTF_8)) {
                 GSON.toJson(warps, MAP_TYPE, writer);
+            }
+
+            try {
+                java.nio.file.Files.move(tempPath, targetPath, java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                java.nio.file.Files.move(tempPath, targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (Exception e) {
             LOGGER.error("Failed to save Xptp warps", e);

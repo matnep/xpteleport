@@ -26,7 +26,7 @@ public class XpRequestManager {
 
     public record XPRequest(UUID requester, int levels, long timestamp) {
         public boolean isExpired() {
-            return (System.currentTimeMillis() - timestamp) > 60000;
+            return (System.currentTimeMillis() - timestamp) > XptpConfig.getTpaRequestTimeoutSeconds() * 1000L;
         }
     }
 }

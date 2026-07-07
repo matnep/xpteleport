@@ -26,7 +26,7 @@ public class TpaManager {
 
     public record TPARequest(UUID requester, boolean here, long timestamp) {
         public boolean isExpired() {
-            return (System.currentTimeMillis() - timestamp) > 60000;
+            return (System.currentTimeMillis() - timestamp) > XptpConfig.getTpaRequestTimeoutSeconds() * 1000L;
         }
     }
 }

@@ -5,7 +5,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.LevelResource;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,17 +21,32 @@ public class LeaderboardManager {
     
     public record LeaderboardEntry(UUID uuid, String name, int levels, int totalXp, boolean isOp) {}
     
-    private static List<LeaderboardEntry> cachedLeaderboard = new ArrayList<>();
+    private static volatile List<LeaderboardEntry> cachedLeaderboard = new ArrayList<>();
     private static long lastUpdateTime = 0;
     private static final AtomicBoolean isUpdating = new AtomicBoolean(false);
 
     public static List<LeaderboardEntry> getLeaderboard(MinecraftServer server) {
         long now = System.currentTimeMillis();
-        // Refresh every 5 minutes in background
-        if (now - lastUpdateTime > 300000 && isUpdating.compareAndSet(false, true)) {
+        long refreshMs = XptpConfig.getLeaderboardRefreshSeconds() * 1000L;
+        if (now - lastUpdateTime > refreshMs && isUpdating.compareAndSet(false, true)) {
+            // Snapshot online players on the main server thread
+            List<LeaderboardEntry> onlineEntries = new ArrayList<>();
+            try {
+                for (net.minecraft.server.level.ServerPlayer player : server.getPlayerList().getPlayers()) {
+                    UUID uuid = player.getUUID();
+                    String name = player.getGameProfile().getName();
+                    int levels = player.experienceLevel;
+                    int totalXp = player.totalExperience;
+                    boolean isOp = server.getPlayerList().isOp(player.getGameProfile());
+                    onlineEntries.add(new LeaderboardEntry(uuid, name, levels, totalXp, isOp));
+                }
+            } catch (Exception e) {
+                LOGGER.error("Failed to snapshot online players for leaderboard", e);
+            }
+
             CompletableFuture.runAsync(() -> {
                 try {
-                    updateLeaderboard(server);
+                    updateLeaderboardAsync(server, onlineEntries);
                 } catch (Exception e) {
                     LOGGER.error("Failed to update XP leaderboard", e);
                 } finally {
@@ -46,7 +60,17 @@ public class LeaderboardManager {
     public static void forceUpdate(MinecraftServer server) {
         if (isUpdating.compareAndSet(false, true)) {
             try {
-                updateLeaderboard(server);
+                // Snapshot online players
+                List<LeaderboardEntry> onlineEntries = new ArrayList<>();
+                for (net.minecraft.server.level.ServerPlayer player : server.getPlayerList().getPlayers()) {
+                    UUID uuid = player.getUUID();
+                    String name = player.getGameProfile().getName();
+                    int levels = player.experienceLevel;
+                    int totalXp = player.totalExperience;
+                    boolean isOp = server.getPlayerList().isOp(player.getGameProfile());
+                    onlineEntries.add(new LeaderboardEntry(uuid, name, levels, totalXp, isOp));
+                }
+                updateLeaderboardAsync(server, onlineEntries);
             } catch (Exception e) {
                 LOGGER.error("Failed to force update XP leaderboard", e);
             } finally {
@@ -55,22 +79,14 @@ public class LeaderboardManager {
         }
     }
 
-    private static void updateLeaderboard(MinecraftServer server) {
-        List<LeaderboardEntry> entries = new ArrayList<>();
+    private static void updateLeaderboardAsync(MinecraftServer server, List<LeaderboardEntry> onlineEntries) {
+        List<LeaderboardEntry> entries = new ArrayList<>(onlineEntries);
         Set<UUID> processed = new HashSet<>();
-
-        // 1. Process online players (live XP)
-        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            UUID uuid = player.getUUID();
-            String name = player.getGameProfile().getName();
-            int levels = player.experienceLevel;
-            int totalXp = player.totalExperience;
-            boolean isOp = server.getPlayerList().isOp(player.getGameProfile());
-            entries.add(new LeaderboardEntry(uuid, name, levels, totalXp, isOp));
-            processed.add(uuid);
+        for (LeaderboardEntry entry : onlineEntries) {
+            processed.add(entry.uuid());
         }
 
-        // 2. Process offline players from playerdata files
+        // Process offline players from playerdata files
         File playerdataDir = server.getWorldPath(LevelResource.PLAYER_DATA_DIR).toFile();
         if (playerdataDir.exists() && playerdataDir.isDirectory()) {
             File[] files = playerdataDir.listFiles((dir, name) -> name.endsWith(".nbt"));

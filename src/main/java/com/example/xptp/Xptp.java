@@ -1,4 +1,4 @@
-package com.example.ftbnep;
+package com.example.xptp;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -37,7 +37,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Mod("xpteleport")
-public class FtbNep {
+public class Xptp {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final Random RANDOM = new Random();
 
@@ -49,11 +49,11 @@ public class FtbNep {
     // Cache for pending Xaero Map teleports
     private static final Map<UUID, PendingXaeroTeleport> pendingXaeroTeleports = new ConcurrentHashMap<>();
 
-    public FtbNep(IEventBus modEventBus) {
-        LOGGER.info("Initializing Standalone FTB Essentials Replacement (ftbnep)...");
+    public Xptp(IEventBus modEventBus) {
+        LOGGER.info("Initializing Standalone FTB Essentials Replacement (xptp)...");
         
         // Load config and warps
-        FtbNepConfig.load();
+        XptpConfig.load();
         WarpManager.load();
 
         // Register event handlers on NeoForge Game event bus
@@ -107,7 +107,7 @@ public class FtbNep {
     }
 
     private boolean tryRedirectTp(CommandEvent event, ServerPlayer player, String commandLine) {
-        if (!FtbNepConfig.isRedirectTpToXtp()) return false;
+        if (!XptpConfig.isRedirectTpToXtp()) return false;
         if (player.hasPermissions(2)) return false; // OPs bypass redirection
 
         if (commandLine.startsWith("/")) {
@@ -165,15 +165,15 @@ public class FtbNep {
             return 0;
         }
 
-        if (!FtbNepConfig.isDistanceBasedXp()) {
-            return isXaero ? FtbNepConfig.getXaeroTpCost() : 10;
+        if (!XptpConfig.isDistanceBasedXp()) {
+            return isXaero ? XptpConfig.getXaeroTpCost() : 10;
         }
 
         // Cross-dimension cost check
         if (!player.level().dimension().location().toString().equals(destination.dimension())) {
-            double cost = FtbNepConfig.getCrossDimensionCost();
+            double cost = XptpConfig.getCrossDimensionCost();
             if (isXaero) {
-                cost *= FtbNepConfig.getXaeroMultiplier();
+                cost *= XptpConfig.getXaeroMultiplier();
             }
             return Math.max(0, (int) Math.round(cost));
         }
@@ -185,18 +185,18 @@ public class FtbNep {
         double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
         double calculatedCost;
-        if (FtbNepConfig.isUseLogarithmicCost()) {
-            double base = FtbNepConfig.getBaseTeleportCost();
-            double mult = FtbNepConfig.getLogMultiplier();
+        if (XptpConfig.isUseLogarithmicCost()) {
+            double base = XptpConfig.getBaseTeleportCost();
+            double mult = XptpConfig.getLogMultiplier();
             calculatedCost = base + mult * Math.log(Math.max(1.0, distance));
         } else {
-            double base = FtbNepConfig.getBaseTeleportCost();
-            double bpl = FtbNepConfig.getBlocksPerLevel();
+            double base = XptpConfig.getBaseTeleportCost();
+            double bpl = XptpConfig.getBlocksPerLevel();
             calculatedCost = base + (distance / (bpl <= 0 ? 500.0 : bpl));
         }
 
         if (isXaero) {
-            calculatedCost *= FtbNepConfig.getXaeroMultiplier();
+            calculatedCost *= XptpConfig.getXaeroMultiplier();
         }
 
         return Math.max(0, (int) Math.round(calculatedCost));
@@ -223,7 +223,7 @@ public class FtbNep {
             .then(Commands.literal("reload")
                 .requires(source -> source.hasPermission(2))
                 .executes(context -> {
-                    boolean success = FtbNepConfig.load();
+                    boolean success = XptpConfig.load();
                     WarpManager.load();
                     if (success) {
                         context.getSource().sendSuccess(() -> Component.literal("§aXPTeleport configuration and warps reloaded successfully!"), true);
@@ -236,9 +236,9 @@ public class FtbNep {
             .then(Commands.literal("change")
                 .requires(source -> source.hasPermission(2))
                 .executes(context -> {
-                    boolean nextVal = !FtbNepConfig.isRedirectTpToXtp();
-                    FtbNepConfig.setRedirectTpToXtp(nextVal);
-                    FtbNepConfig.save();
+                    boolean nextVal = !XptpConfig.isRedirectTpToXtp();
+                    XptpConfig.setRedirectTpToXtp(nextVal);
+                    XptpConfig.save();
                     context.getSource().sendSuccess(() -> Component.literal("§aXPTeleport auto-redirection toggled to: " + nextVal), true);
                     return 1;
                 })
@@ -290,7 +290,7 @@ public class FtbNep {
 
                     if (requester.experienceLevel < cost) {
                         context.getSource().sendFailure(Component.literal(
-                            String.format(FtbNepConfig.getInsufficientXpMessage(), cost, requester.experienceLevel)
+                            String.format(XptpConfig.getInsufficientXpMessage(), cost, requester.experienceLevel)
                         ));
                         return 0;
                     }
@@ -389,7 +389,7 @@ public class FtbNep {
 
                     if (target.experienceLevel < cost) {
                         context.getSource().sendFailure(Component.literal(
-                            String.format(FtbNepConfig.getInsufficientXpMessage(), cost, target.experienceLevel)
+                            String.format(XptpConfig.getInsufficientXpMessage(), cost, target.experienceLevel)
                         ));
                         return 0;
                     }
@@ -509,7 +509,7 @@ public class FtbNep {
                     player.sendSystemMessage(Component.literal("§cYou have no homes set."));
                 } else {
                     String names = String.join(", ", homes.keySet());
-                    player.sendSystemMessage(Component.literal("§aYour homes (" + homes.size() + "/" + FtbNepConfig.getMaxHomes() + "): " + names));
+                    player.sendSystemMessage(Component.literal("§aYour homes (" + homes.size() + "/" + XptpConfig.getMaxHomes() + "): " + names));
                 }
                 return 1;
             })
@@ -546,7 +546,7 @@ public class FtbNep {
                     int cost = calculateXpCost(player, loc, false);
                     if (player.experienceLevel < cost) {
                         context.getSource().sendFailure(Component.literal(
-                            String.format(FtbNepConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
+                            String.format(XptpConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
                         ));
                         return 0;
                     }
@@ -608,7 +608,7 @@ public class FtbNep {
                 int cost = calculateXpCost(player, spawnLoc, false);
                 if (player.experienceLevel < cost) {
                     context.getSource().sendFailure(Component.literal(
-                        String.format(FtbNepConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
+                        String.format(XptpConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
                     ));
                     return 0;
                 }
@@ -640,7 +640,7 @@ public class FtbNep {
                 int cost = calculateXpCost(player, loc, false);
                 if (player.experienceLevel < cost) {
                     context.getSource().sendFailure(Component.literal(
-                        String.format(FtbNepConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
+                        String.format(XptpConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
                     ));
                     return 0;
                 }
@@ -726,9 +726,9 @@ public class FtbNep {
         ServerPlayer player = context.getSource().getPlayerOrException();
         Map<String, TeleportLocation> homes = HomeManager.getHomes(player.server, player.getUUID());
 
-        if (homes.size() >= FtbNepConfig.getMaxHomes() && !homes.containsKey(name.toLowerCase())) {
+        if (homes.size() >= XptpConfig.getMaxHomes() && !homes.containsKey(name.toLowerCase())) {
             context.getSource().sendFailure(Component.literal(
-                "§cYou cannot set any more homes! (Limit: " + FtbNepConfig.getMaxHomes() + ")"
+                "§cYou cannot set any more homes! (Limit: " + XptpConfig.getMaxHomes() + ")"
             ));
             return 0;
         }
@@ -754,7 +754,7 @@ public class FtbNep {
         int cost = calculateXpCost(player, loc, false);
         if (player.experienceLevel < cost) {
             context.getSource().sendFailure(Component.literal(
-                String.format(FtbNepConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
+                String.format(XptpConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
             ));
             return 0;
         }
@@ -788,18 +788,18 @@ public class FtbNep {
         ServerPlayer player = context.getSource().getPlayerOrException();
         if (!CooldownManager.checkCooldown(player)) return 0;
 
-        int cost = FtbNepConfig.getCost("rtp"); // RTP uses flat configured cost
+        int cost = XptpConfig.getCost("rtp"); // RTP uses flat configured cost
         if (player.experienceLevel < cost) {
             context.getSource().sendFailure(Component.literal(
-                String.format(FtbNepConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
+                String.format(XptpConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
             ));
             return 0;
         }
 
         ServerLevel level = player.serverLevel();
         BlockPos spawn = level.getSharedSpawnPos();
-        int rtpMin = FtbNepConfig.getRtpMinRange();
-        int rtpMax = FtbNepConfig.getRtpMaxRange();
+        int rtpMin = XptpConfig.getRtpMinRange();
+        int rtpMax = XptpConfig.getRtpMaxRange();
         net.minecraft.world.level.border.WorldBorder border = level.getWorldBorder();
 
         player.sendSystemMessage(Component.literal("§dLooking for safe location..."));
@@ -859,7 +859,7 @@ public class FtbNep {
 
         if (player.experienceLevel < cost) {
             player.sendSystemMessage(Component.literal(
-                String.format(FtbNepConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
+                String.format(XptpConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
             ));
             return 0;
         }
@@ -868,7 +868,7 @@ public class FtbNep {
         pendingXaeroTeleports.put(player.getUUID(), new PendingXaeroTeleport(dest, cost, System.currentTimeMillis()));
 
         // Format prompt message
-        String prompt = String.format(FtbNepConfig.getConfirmPromptMessage(), 
+        String prompt = String.format(XptpConfig.getConfirmPromptMessage(), 
             String.format("%.1f", pos.x), 
             String.format("%.1f", pos.y), 
             String.format("%.1f", pos.z), 
@@ -907,7 +907,7 @@ public class FtbNep {
         int cost = pending.cost;
         if (player.experienceLevel < cost) {
             player.sendSystemMessage(Component.literal(
-                String.format(FtbNepConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
+                String.format(XptpConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
             ));
             pendingXaeroTeleports.remove(uuid);
             return 0;

@@ -1,4 +1,4 @@
-package com.example.ftbnep;
+package com.example.xptp;
 
 import java.util.Map;
 import java.util.UUID;

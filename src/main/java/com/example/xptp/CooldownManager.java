@@ -1,4 +1,4 @@
-package com.example.ftbnep;
+package com.example.xptp;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -17,7 +17,7 @@ public class CooldownManager {
         long now = System.currentTimeMillis();
         long last = lastTeleports.getOrDefault(uuid, 0L);
         long diff = now - last;
-        long cooldownMs = FtbNepConfig.getCooldownSeconds() * 1000L;
+        long cooldownMs = XptpConfig.getCooldownSeconds() * 1000L;
 
         if (diff < cooldownMs) {
             long remaining = (cooldownMs - diff) / 1000L;

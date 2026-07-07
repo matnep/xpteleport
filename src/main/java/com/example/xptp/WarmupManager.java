@@ -1,4 +1,4 @@
-package com.example.ftbnep;
+package com.example.xptp;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -35,7 +35,7 @@ public class WarmupManager {
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         long now = System.currentTimeMillis();
-        long warmupMs = FtbNepConfig.getWarmupSeconds() * 1000L;
+        long warmupMs = XptpConfig.getWarmupSeconds() * 1000L;
 
         for (Map.Entry<UUID, WarmupTask> entry : activeWarmups.entrySet()) {
             WarmupTask task = entry.getValue();
@@ -79,7 +79,7 @@ public class WarmupManager {
                 if (task.xpCost > 0) {
                     player.giveExperienceLevels(-task.xpCost);
                     player.sendSystemMessage(Component.literal(
-                        String.format(FtbNepConfig.getXpDeductedMessage(), task.xpCost)
+                        String.format(XptpConfig.getXpDeductedMessage(), task.xpCost)
                     ), false);
                 }
 

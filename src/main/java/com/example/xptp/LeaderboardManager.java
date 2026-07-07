@@ -1,4 +1,4 @@
-package com.example.ftbnep;
+package com.example.xptp;
 
 import com.mojang.authlib.GameProfile;
 import net.minecraft.nbt.CompoundTag;
@@ -110,7 +110,7 @@ public class LeaderboardManager {
         }
 
         // Filter based on OP settings
-        boolean showOps = FtbNepConfig.isShowOpsOnLeaderboard();
+        boolean showOps = XptpConfig.isShowOpsOnLeaderboard();
         List<LeaderboardEntry> filtered = new ArrayList<>();
         for (LeaderboardEntry entry : entries) {
             if (entry.isOp() && !showOps) {

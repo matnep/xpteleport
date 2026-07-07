@@ -1,4 +1,4 @@
-package com.example.ftbnep;
+package com.example.xptp;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

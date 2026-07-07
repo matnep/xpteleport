@@ -4,6 +4,37 @@ All notable changes to the **XPTeleport** mod will be documented in this file.
 
 ---
 
+## [1.1.0] - 2026-07-07
+
+This release introduces critical stability enhancements, thread safety concurrency updates, atomic file I/O to prevent config and player data corruption, parameter validation limits, configurable timeouts, and splits the god class `Xptp.java` into modular command registrations.
+
+### Added
+- **Configurable Timeouts:** Externalized previously hardcoded durations to config file settings:
+  - `tpa_request_timeout_seconds` (default: 60) for expiring pending TPA and XP requests.
+  - `xaero_confirm_timeout_seconds` (default: 30) for expiring map coordinate teleport confirmations.
+  - `leaderboard_refresh_seconds` (default: 300) for regulating background refreshes.
+- **Strict Parameter & Name Validation:**
+  - Enforced name checks on `/sethome`, `/setwarp`, and `/buywarp` to only accept alphanumeric strings and underscores (`^[a-zA-Z0-9_]+$`) up to 32 characters in length.
+  - Set a safety upper bound of `10000` levels on `/xpgive` and `/xprequest` transfers.
+- **Modular Command Classes:** Extracted all command registrations and command execution paths into decoupled files under `com.example.xptp`:
+  - `HomeCommands.java`
+  - `WarpCommands.java`
+  - `TpaCommands.java`
+  - `XpCommands.java`
+  - `TeleportCommands.java`
+  - `AdminCommands.java`
+- **Teleportation DRY Helper:** Introduced `Xptp.performTeleport(...)` to centralize OP instant-bypass checks and normal warmup schedules.
+- **Chat Redirection Tokenizer:** Added a custom quote-aware tokenizer to support spaces inside coordinate teleport clicks/commands (e.g. selector parameters).
+
+### Changed / Fixed
+- **Leaderboard Concurrency safety:** Fixed a thread-safety bug where the async task was reading live collections off the main thread. Now collects a thread-safe online player snapshot on the main thread first, and assigns list updates to a `volatile` reference.
+- **Safe Atomic File writes:** Replaced all FileWriter invocations with a temporary `.tmp` write and atomic replace (`StandardCopyOption.ATOMIC_MOVE`) to prevent configurations and player data from corruption on sudden crashes.
+- **RTP Async Exception safety:** Wrapped `/rtp` (or `/wild`) chunk load futures in a `whenCompleteAsync` method with a robust `try-catch-finally` block to ensure active search locks are cleared even if chunk generation throws an exception.
+- **Log4j Logging migration:** Replaced stderr printStackTrace in HomeManager with direct Log4j logger errors.
+- **Warmup Overwrite feedback:** WarmupManager now cancels old tasks and alerts players instead of silently overwriting when starting a new warmup.
+
+---
+
 ## [1.0.1] - 2026-07-07
 
 This release introduces major updates to the experience economy, command permissions, config file formatting, code naming conventions, and fixes critical issues with safe RTP (Random Teleport).

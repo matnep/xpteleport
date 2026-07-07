@@ -102,7 +102,13 @@ The config file is generated automatically on launch with detailed comments plac
   "//_cooldown_seconds": "Delay in seconds between successful teleports. Set to 0 to disable cooldowns.",
   "cooldown_seconds": 0,
   "//_show_ops_on_leaderboard": "Set to true to show server operators (OPs) on the XP leaderboard.",
-  "show_ops_on_leaderboard": false
+  "show_ops_on_leaderboard": false,
+  "//_tpa_request_timeout_seconds": "Time in seconds before a pending TPA request expires.",
+  "tpa_request_timeout_seconds": 60,
+  "//_xaero_confirm_timeout_seconds": "Time in seconds before a pending Xaero coordinate teleport confirmation expires.",
+  "xaero_confirm_timeout_seconds": 30,
+  "//_leaderboard_refresh_seconds": "Time in seconds between automatic background refreshes of the XP leaderboard.",
+  "leaderboard_refresh_seconds": 300
 }
 ```
 

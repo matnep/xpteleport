@@ -138,7 +138,7 @@ public class TeleportCommands {
         int rtpMax = XptpConfig.getRtpMaxRange();
         net.minecraft.world.level.border.WorldBorder border = level.getWorldBorder();
 
-        player.sendSystemMessage(Component.literal("§dLooking for safe location..."));
+        player.sendSystemMessage(Component.literal("§6Looking for safe location..."));
         activeRtpSearches.add(player.getUUID());
 
         findRandomSafeLocationAsync(player, level, spawn, rtpMin, rtpMax, border, cost, 0);

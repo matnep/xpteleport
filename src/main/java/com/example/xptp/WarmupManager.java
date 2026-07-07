@@ -23,7 +23,7 @@ public class WarmupManager {
             player.sendSystemMessage(Component.literal("§cTeleport cancelled!"), true);
         }
         activeWarmups.put(player.getUUID(), new WarmupTask(player, destination, xpCost));
-        player.sendSystemMessage(Component.literal("§dTeleportation initiated..."), false);
+        player.sendSystemMessage(Component.literal("§6Teleportation initiated..."), false);
     }
 
     public static void cancelWarmup(ServerPlayer player, String reason) {

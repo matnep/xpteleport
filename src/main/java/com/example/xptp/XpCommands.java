@@ -200,7 +200,7 @@ public class XpCommands {
             for (LeaderboardManager.LeaderboardEntry entry : list) {
                 String color = "§e";
                 if (rank == 1) color = "§a§l";
-                else if (rank == 2) color = "§b";
+                else if (rank == 2) color = "§6";
                 else if (rank == 3) color = "§7";
                 
                 String rankStr = String.format("%s%d. %s", color, rank, entry.name());

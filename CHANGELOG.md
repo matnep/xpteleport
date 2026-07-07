@@ -57,18 +57,18 @@ This release introduces major updates to the experience economy, command permiss
   - Solved the issue where RTP checks failed on unloaded chunks due to Y coordinates returning bottom of the world Y=-64.
   - Increased random location search count from 3 to **15 attempts** safely without blocking the server main thread.
   - Implemented a safe land checks validator verifying solid ground and 2 blocks of air headspace while avoiding danger blocks (lava, water, fire, magma, cactus).
-- **Branding Refactoring:** Completed the package and class rename from the legacy `FtbNep` to the new `Xptp` branding package `com.example.xptp` across the entire codebase.
+- **Branding Refactoring:** Refactored packaging and naming across the entire codebase to use the new `com.example.xptp` structure.
 
 ---
 
 ## [1.0.0-beta] - 2026-07-07
 
-This is the initial beta release of **XPTeleport**, a 100% standalone, server-side teleportation mod for **NeoForge 1.21.1**. It serves as a complete replacement for standard essentials teleportation mods (like FTB Essentials), running completely on the server side so vanilla clients can connect without any mod installations.
+This is the initial beta release of **XPTeleport**, a 100% standalone, server-side teleportation mod for **NeoForge 1.21.1**. It serves as a complete replacement for standard essentials teleportation mods, running completely on the server side so vanilla clients can connect without any mod installations.
 
 ### Added
 
 #### 🚀 Core & Standalone Architecture
-- **Standalone NeoForge 1.21.1 Native Mod:** Removed all external dependencies on FTB Essentials, FTB Library, and Architectury.
+- **Standalone NeoForge 1.21.1 Native Mod:** Removed all external library dependencies.
 - **Server-Side Only:** No client-side installation required. Players can join using a standard vanilla Minecraft client.
 - **Separated Data Storage:**
   - **Player Homes:** Saved in `<world>/xpteleport/homes/<player-uuid>.json`. This ensures player home data is bundled with world saves for easy backups and resets cleanly with a new world.

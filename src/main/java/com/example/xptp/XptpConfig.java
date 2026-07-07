@@ -98,11 +98,8 @@ public class XptpConfig {
                     }
                 }
                 
-                // Read from either the new key redirect_tp_to_xtp or fallback to old redirect_tp_to_ftbtp
                 if (json.has("redirect_tp_to_xtp")) {
                     redirectTpToXtp = json.get("redirect_tp_to_xtp").getAsBoolean();
-                } else if (json.has("redirect_tp_to_ftbtp")) {
-                    redirectTpToXtp = json.get("redirect_tp_to_ftbtp").getAsBoolean();
                 }
 
                 if (json.has("global_cost_multiplier")) {

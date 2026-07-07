@@ -11,7 +11,7 @@ public class AdminCommands {
         dispatcher.register(Commands.literal("xpteleport")
             .then(Commands.literal("info")
                 .executes(context -> {
-                    context.getSource().sendSuccess(() -> Component.literal("§dXPTeleport Mod v" + XptpConfig.class.getPackage().getImplementationVersion() + " by Matnepp. Standalone NeoForge 1.21.1 replacement for FTB Essentials."), false);
+                    context.getSource().sendSuccess(() -> Component.literal("Made by Matnepp from Burhan Bistro<3"), false);
                     return 1;
                 })
             )

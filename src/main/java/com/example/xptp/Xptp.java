@@ -32,7 +32,7 @@ public class Xptp {
     );
 
     public Xptp(IEventBus modEventBus) {
-        LOGGER.info("Initializing Standalone FTB Essentials Replacement (xptp)...");
+        LOGGER.info("Initializing XPTeleport (xptp)...");
         
         // Load config and warps
         XptpConfig.load();

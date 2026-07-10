@@ -44,13 +44,13 @@ public class TeleportCommands {
             .requires(source -> source.isPlayer())
             .executes(context -> {
                 ServerPlayer player = context.getSource().getPlayerOrException();
-                if (!CooldownManager.checkCooldown(player)) return 0;
+                if (!CooldownManager.checkCooldown(player, "spawn")) return 0;
 
                 ServerLevel level = player.server.overworld();
                 BlockPos spawn = level.getSharedSpawnPos();
                 TeleportLocation spawnLoc = new TeleportLocation(spawn.getX() + 0.5, spawn.getY() + 0.5, spawn.getZ() + 0.5, player.getYRot(), player.getXRot(), level.dimension().location().toString());
 
-                int cost = Xptp.calculateXpCost(player, spawnLoc, false);
+                int cost = Xptp.calculateXpCost(player, spawnLoc, "spawn", false);
                 if (player.experienceLevel < cost) {
                     context.getSource().sendFailure(Component.literal(
                         String.format(XptpConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
@@ -58,7 +58,7 @@ public class TeleportCommands {
                     return 0;
                 }
 
-                Xptp.performTeleport(player, spawnLoc, cost);
+                Xptp.performTeleport(player, player, spawnLoc, cost, "spawn");
                 return 1;
             })
         );
@@ -68,15 +68,17 @@ public class TeleportCommands {
             .requires(source -> source.isPlayer())
             .executes(context -> {
                 ServerPlayer player = context.getSource().getPlayerOrException();
-                TeleportLocation loc = BackManager.getLastLocation(player);
-                if (loc == null) {
+                BackManager.BackRecord rec = BackManager.getLastRecord(player);
+                if (rec == null) {
                     context.getSource().sendFailure(Component.literal("§cNo teleport/death history found."));
                     return 0;
                 }
 
-                if (!CooldownManager.checkCooldown(player)) return 0;
+                String cmd = rec.isDeath ? "death_back" : "back";
+                if (!CooldownManager.checkCooldown(player, cmd)) return 0;
 
-                int cost = Xptp.calculateXpCost(player, loc, false);
+                TeleportLocation loc = rec.location;
+                int cost = Xptp.calculateXpCost(player, loc, cmd, false);
                 if (player.experienceLevel < cost) {
                     context.getSource().sendFailure(Component.literal(
                         String.format(XptpConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
@@ -84,7 +86,7 @@ public class TeleportCommands {
                     return 0;
                 }
 
-                Xptp.performTeleport(player, loc, cost);
+                Xptp.performTeleport(player, player, loc, cost, cmd);
                 return 1;
             })
         );
@@ -117,9 +119,9 @@ public class TeleportCommands {
 
     private static int executeRtp(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
-        if (!CooldownManager.checkCooldown(player)) return 0;
+        if (!CooldownManager.checkCooldown(player, "rtp")) return 0;
 
-        int cost = XptpConfig.getCost("rtp");
+        int cost = XptpConfig.getFlatCost("rtp");
         if (player.experienceLevel < cost) {
             context.getSource().sendFailure(Component.literal(
                 String.format(XptpConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
@@ -185,7 +187,7 @@ public class TeleportCommands {
                             activeRtpSearches.remove(player.getUUID());
                             nextAttemptStarted = true;
                             
-                            Xptp.performTeleport(player, dest, cost);
+                            Xptp.performTeleport(player, player, dest, cost, "rtp");
                         } else {
                             int maxAttempts = 15;
                             if (attempt + 1 < maxAttempts) {
@@ -234,13 +236,13 @@ public class TeleportCommands {
     }
 
     public static int initXaeroTp(ServerPlayer player, Vec3 pos, Float yaw, Float pitch) {
-        if (!CooldownManager.checkCooldown(player)) return 0;
+        if (!CooldownManager.checkCooldown(player, "xaero")) return 0;
 
         float y = yaw != null ? yaw : player.getYRot();
         float p = pitch != null ? pitch : player.getXRot();
         TeleportLocation dest = new TeleportLocation(pos.x, pos.y, pos.z, y, p, player.level().dimension().location().toString());
 
-        int cost = Xptp.calculateXpCost(player, dest, true);
+        int cost = Xptp.calculateXpCost(player, dest, "xaero", true);
 
         if (player.experienceLevel < cost) {
             player.sendSystemMessage(Component.literal(
@@ -282,7 +284,7 @@ public class TeleportCommands {
             return 0;
         }
 
-        if (!CooldownManager.checkCooldown(player)) {
+        if (!CooldownManager.checkCooldown(player, "xaero")) {
             pendingXaeroTeleports.remove(uuid);
             return 0;
         }
@@ -297,7 +299,7 @@ public class TeleportCommands {
         }
 
         pendingXaeroTeleports.remove(uuid);
-        Xptp.performTeleport(player, pending.destination, cost);
+        Xptp.performTeleport(player, player, pending.destination, cost, "xaero");
         return 1;
     }
 }

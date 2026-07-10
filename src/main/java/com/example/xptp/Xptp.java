@@ -176,54 +176,69 @@ public class Xptp {
         return name != null && name.length() >= 1 && name.length() <= 32 && name.matches("^[a-zA-Z0-9_]+$");
     }
 
-    public static void performTeleport(ServerPlayer player, TeleportLocation destination, int cost) {
+    @SubscribeEvent
+    public void onServerStarted(net.neoforged.neoforge.event.server.ServerStartedEvent event) {
+        LOGGER.info("Pre-populating XP leaderboard...");
+        LeaderboardManager.forceUpdate(event.getServer());
+    }
+
+    public static void performTeleport(ServerPlayer player, ServerPlayer payer, TeleportLocation destination, int cost, String commandType) {
         if (player.hasPermissions(2)) {
             BackManager.record(player);
             destination.teleport(player);
             player.sendSystemMessage(Component.literal("§aTeleported!"), true);
         } else {
-            WarmupManager.startWarmup(player, destination, cost);
+            WarmupManager.startWarmup(player, payer, destination, cost, commandType);
         }
     }
 
-    public static int calculateXpCost(ServerPlayer player, TeleportLocation destination, boolean isXaero) {
+    public static int calculateXpCost(ServerPlayer player, TeleportLocation destination, String commandType, boolean isXaero) {
         // OPs bypass XP charging completely
         if (player.hasPermissions(2)) {
             return 0;
         }
 
-        if (!XptpConfig.isDistanceBasedXp()) {
-            return isXaero ? XptpConfig.getXaeroTpCost() : 10;
+        boolean useDistance = XptpConfig.isDistanceBasedXp();
+        if ("home".equalsIgnoreCase(commandType)) {
+            useDistance = XptpConfig.isHomeDistanceBased();
+        } else if ("back".equalsIgnoreCase(commandType)) {
+            useDistance = XptpConfig.isBackDistanceBased();
+        } else if ("death_back".equalsIgnoreCase(commandType)) {
+            useDistance = XptpConfig.isDeathBackDistanceBased();
         }
-
-        // Cross-dimension cost check
-        if (!player.level().dimension().location().toString().equals(destination.dimension())) {
-            double cost = XptpConfig.getCrossDimensionCost();
-            if (isXaero) {
-                cost *= XptpConfig.getXaeroMultiplier();
-            }
-            return Math.max(0, (int) Math.round(cost));
-        }
-
-        // Calculate 3D distance
-        double dx = player.getX() - destination.x();
-        double dy = player.getY() - destination.y();
-        double dz = player.getZ() - destination.z();
-        double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
         double calculatedCost;
-        if (XptpConfig.isUseLogarithmicCost()) {
-            double base = XptpConfig.getBaseTeleportCost();
-            double mult = XptpConfig.getLogMultiplier();
-            calculatedCost = base + mult * Math.log(Math.max(1.0, distance));
+        if (!useDistance) {
+            calculatedCost = isXaero ? XptpConfig.getXaeroTpCost() : XptpConfig.getFlatCost(commandType);
         } else {
-            double base = XptpConfig.getBaseTeleportCost();
-            double bpl = XptpConfig.getBlocksPerLevel();
-            calculatedCost = base + (distance / (bpl <= 0 ? 500.0 : bpl));
-        }
+            // Cross-dimension cost check
+            if (!player.level().dimension().location().toString().equals(destination.dimension())) {
+                double cost = XptpConfig.getCrossDimensionCost();
+                if (isXaero) {
+                    cost *= XptpConfig.getXaeroMultiplier();
+                }
+                return Math.max(0, (int) Math.round(cost));
+            }
 
-        if (isXaero) {
-            calculatedCost *= XptpConfig.getXaeroMultiplier();
+            // Calculate 3D distance
+            double dx = player.getX() - destination.x();
+            double dy = player.getY() - destination.y();
+            double dz = player.getZ() - destination.z();
+            double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            if (XptpConfig.isUseLogarithmicCost()) {
+                double base = XptpConfig.getBaseTeleportCost();
+                double mult = XptpConfig.getLogMultiplier();
+                calculatedCost = base + mult * Math.log(Math.max(1.0, distance));
+            } else {
+                double base = XptpConfig.getBaseTeleportCost();
+                double bpl = XptpConfig.getBlocksPerLevel();
+                calculatedCost = base + (distance / (bpl <= 0 ? 500.0 : bpl));
+            }
+
+            if (isXaero) {
+                calculatedCost *= XptpConfig.getXaeroMultiplier();
+            }
         }
 
         return Math.max(0, (int) Math.round(calculatedCost));

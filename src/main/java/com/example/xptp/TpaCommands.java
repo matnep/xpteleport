@@ -109,29 +109,32 @@ public class TpaCommands {
                 }
 
                 if (req.here()) {
-                    // target teleports to requester. Target pays cost.
-                    if (!CooldownManager.checkCooldown(target)) return 0;
+                    // target teleports to requester. Requester pays cost.
+                    if (!CooldownManager.checkCooldown(target, "tpahere")) return 0;
                     TeleportLocation reqLoc = TeleportLocation.of(requester);
-                    int cost = Xptp.calculateXpCost(target, reqLoc, false);
+                    int cost = Xptp.calculateXpCost(requester, reqLoc, "tpahere", false);
 
-                    if (target.experienceLevel < cost) {
+                    if (requester.experienceLevel < cost) {
                         context.getSource().sendFailure(Component.literal(
-                            String.format(XptpConfig.getInsufficientXpMessage(), cost, target.experienceLevel)
+                            String.format("§cRequester %s no longer has enough XP levels! (Cost: %s levels)", requester.getGameProfile().getName(), cost)
                         ));
                         return 0;
                     }
                     
+                    requester.sendSystemMessage(Component.literal(
+                        String.format("§a%s accepted your request. Teleporting them to you in 3 seconds (Cost: %s XP levels)...", target.getGameProfile().getName(), cost)
+                    ));
+                    
                     TpaManager.removeRequest(target.getUUID());
-                    Xptp.performTeleport(target, reqLoc, cost);
-                    requester.sendSystemMessage(Component.literal("§a" + target.getGameProfile().getName() + " accepted your request. Teleporting..."));
+                    Xptp.performTeleport(target, requester, reqLoc, cost, "tpahere");
                 } else {
                     // requester teleports to target. Requester pays cost.
-                    if (!CooldownManager.checkCooldown(requester)) {
+                    if (!CooldownManager.checkCooldown(requester, "tpa")) {
                         context.getSource().sendFailure(Component.literal("§cRequester is on a teleport cooldown."));
                         return 0;
                     }
                     TeleportLocation targetLoc = TeleportLocation.of(target);
-                    int cost = Xptp.calculateXpCost(requester, targetLoc, false);
+                    int cost = Xptp.calculateXpCost(requester, targetLoc, "tpa", false);
 
                     if (requester.experienceLevel < cost) {
                         context.getSource().sendFailure(Component.literal(
@@ -141,7 +144,7 @@ public class TpaCommands {
                     }
 
                     TpaManager.removeRequest(target.getUUID());
-                    Xptp.performTeleport(requester, targetLoc, cost);
+                    Xptp.performTeleport(requester, requester, targetLoc, cost, "tpa");
                     target.sendSystemMessage(Component.literal("§aTPA request accepted. Teleporting..."));
                 }
                 return 1;

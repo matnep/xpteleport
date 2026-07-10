@@ -94,9 +94,9 @@ public class HomeCommands {
             return 0;
         }
 
-        if (!CooldownManager.checkCooldown(player)) return 0;
+        if (!CooldownManager.checkCooldown(player, "home")) return 0;
 
-        int cost = Xptp.calculateXpCost(player, loc, false);
+        int cost = Xptp.calculateXpCost(player, loc, "home", false);
         if (player.experienceLevel < cost) {
             context.getSource().sendFailure(Component.literal(
                 String.format(XptpConfig.getInsufficientXpMessage(), cost, player.experienceLevel)
@@ -104,7 +104,7 @@ public class HomeCommands {
             return 0;
         }
 
-        Xptp.performTeleport(player, loc, cost);
+        Xptp.performTeleport(player, player, loc, cost, "home");
         return 1;
     }
 

@@ -185,25 +185,19 @@ public class XpCommands {
             list = LeaderboardManager.getLeaderboard(server);
         }
 
-        source.sendSystemMessage(Component.literal("§6§l=== XP Levels Leaderboard ==="));
+        source.sendSystemMessage(Component.literal("=== XP Levels Leaderboard ==="));
         if (list.isEmpty()) {
-            source.sendSystemMessage(Component.literal("§7No players found on the leaderboard yet."));
+            source.sendSystemMessage(Component.literal("No players found on the leaderboard yet."));
         } else {
             int rank = 1;
             for (LeaderboardManager.LeaderboardEntry entry : list) {
-                String color = "§e";
-                if (rank == 1) color = "§a§l";
-                else if (rank == 2) color = "§6";
-                else if (rank == 3) color = "§7";
-                
-                String rankStr = String.format("%s%d. %s", color, rank, entry.name());
                 source.sendSystemMessage(Component.literal(
-                    String.format("%-25s §6%d levels §7(%d total XP)", rankStr, entry.levels(), entry.totalXp())
+                    String.format("%d. %s %dlevels", rank, entry.name(), entry.levels())
                 ));
                 rank++;
             }
         }
-        source.sendSystemMessage(Component.literal("§6§l============================"));
+        source.sendSystemMessage(Component.literal("============================"));
         return 1;
     }
 }

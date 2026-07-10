@@ -58,24 +58,20 @@ public class LeaderboardManager {
     }
 
     public static void forceUpdate(MinecraftServer server) {
-        if (isUpdating.compareAndSet(false, true)) {
-            try {
-                // Snapshot online players
-                List<LeaderboardEntry> onlineEntries = new ArrayList<>();
-                for (net.minecraft.server.level.ServerPlayer player : server.getPlayerList().getPlayers()) {
-                    UUID uuid = player.getUUID();
-                    String name = player.getGameProfile().getName();
-                    int levels = player.experienceLevel;
-                    int totalXp = player.totalExperience;
-                    boolean isOp = server.getPlayerList().isOp(player.getGameProfile());
-                    onlineEntries.add(new LeaderboardEntry(uuid, name, levels, totalXp, isOp));
-                }
-                updateLeaderboardAsync(server, onlineEntries);
-            } catch (Exception e) {
-                LOGGER.error("Failed to force update XP leaderboard", e);
-            } finally {
-                isUpdating.set(false);
+        try {
+            // Snapshot online players
+            List<LeaderboardEntry> onlineEntries = new ArrayList<>();
+            for (net.minecraft.server.level.ServerPlayer player : server.getPlayerList().getPlayers()) {
+                UUID uuid = player.getUUID();
+                String name = player.getGameProfile().getName();
+                int levels = player.experienceLevel;
+                int totalXp = player.totalExperience;
+                boolean isOp = server.getPlayerList().isOp(player.getGameProfile());
+                onlineEntries.add(new LeaderboardEntry(uuid, name, levels, totalXp, isOp));
             }
+            updateLeaderboardAsync(server, onlineEntries);
+        } catch (Exception e) {
+            LOGGER.error("Failed to force update XP leaderboard", e);
         }
     }
 
@@ -89,7 +85,7 @@ public class LeaderboardManager {
         // Process offline players from playerdata files
         File playerdataDir = server.getWorldPath(LevelResource.PLAYER_DATA_DIR).toFile();
         if (playerdataDir.exists() && playerdataDir.isDirectory()) {
-            File[] files = playerdataDir.listFiles((dir, name) -> name.endsWith(".nbt"));
+            File[] files = playerdataDir.listFiles((dir, name) -> name.endsWith(".dat"));
             if (files != null) {
                 for (File file : files) {
                     try {

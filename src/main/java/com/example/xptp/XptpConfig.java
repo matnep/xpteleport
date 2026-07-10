@@ -51,18 +51,36 @@ public class XptpConfig {
     private static int xaeroConfirmTimeoutSeconds = 30;
     private static int leaderboardRefreshSeconds = 300;
 
+    // Flat cost and cooldown options
+    private static boolean homeDistanceBased = false;
+    private static boolean backDistanceBased = true;
+    private static boolean deathBackDistanceBased = true;
+    private static final Map<String, Integer> cooldowns = new HashMap<>();
+
     static {
         // Set defaults
         costs.put("tpa", 10);
         costs.put("tpahere", 10);
         costs.put("tpaccept", 10);
-        costs.put("home", 10);
+        costs.put("home", 2);
         costs.put("warp", 10);
         costs.put("spawn", 10);
         costs.put("rtp", 10);
         costs.put("wild", 10);
         costs.put("back", 10);
+        costs.put("death_back", 10);
         costs.put("xaero_tp", 30);
+
+        cooldowns.put("tpa", 0);
+        cooldowns.put("tpahere", 0);
+        cooldowns.put("tpaccept", 0);
+        cooldowns.put("home", 60);
+        cooldowns.put("warp", 0);
+        cooldowns.put("spawn", 0);
+        cooldowns.put("rtp", 120);
+        cooldowns.put("wild", 120);
+        cooldowns.put("back", 0);
+        cooldowns.put("death_back", 0);
     }
 
     public static boolean load() {
@@ -168,6 +186,21 @@ public class XptpConfig {
                 if (json.has("leaderboard_refresh_seconds")) {
                     leaderboardRefreshSeconds = json.get("leaderboard_refresh_seconds").getAsInt();
                 }
+                if (json.has("home_distance_based")) {
+                    homeDistanceBased = json.get("home_distance_based").getAsBoolean();
+                }
+                if (json.has("back_distance_based")) {
+                    backDistanceBased = json.get("back_distance_based").getAsBoolean();
+                }
+                if (json.has("death_back_distance_based")) {
+                    deathBackDistanceBased = json.get("death_back_distance_based").getAsBoolean();
+                }
+                if (json.has("cooldowns")) {
+                    JsonObject cdObj = json.getAsJsonObject("cooldowns");
+                    for (Map.Entry<String, com.google.gson.JsonElement> entry : cdObj.entrySet()) {
+                        cooldowns.put(entry.getKey().toLowerCase(), entry.getValue().getAsInt());
+                    }
+                }
             }
             LOGGER.info("XPTeleport config loaded successfully.");
             save(); // Automatically migrate and write help comments / README
@@ -260,6 +293,22 @@ public class XptpConfig {
 
             json.addProperty("//_leaderboard_refresh_seconds", "Time in seconds between automatic background refreshes of the XP leaderboard.");
             json.addProperty("leaderboard_refresh_seconds", leaderboardRefreshSeconds);
+
+            json.addProperty("//_home_distance_based", "Set to true to calculate /home cost based on distance. If false, uses flat cost in 'costs'.");
+            json.addProperty("home_distance_based", homeDistanceBased);
+
+            json.addProperty("//_back_distance_based", "Set to true to calculate /back cost based on distance. If false, uses flat cost in 'costs'.");
+            json.addProperty("back_distance_based", backDistanceBased);
+
+            json.addProperty("//_death_back_distance_based", "Set to true to calculate /back after death cost based on distance. If false, uses flat cost in 'costs'.");
+            json.addProperty("death_back_distance_based", deathBackDistanceBased);
+
+            JsonObject cdObj = new JsonObject();
+            for (Map.Entry<String, Integer> entry : cooldowns.entrySet()) {
+                cdObj.addProperty(entry.getKey(), entry.getValue());
+            }
+            json.addProperty("//_cooldowns", "Cooldown in seconds for specific commands. Set to 0 to disable cooldown.");
+            json.add("cooldowns", cdObj);
 
             java.nio.file.Path targetPath = CONFIG_FILE.toPath();
             java.nio.file.Path tempPath = targetPath.resolveSibling(targetPath.getFileName() + ".tmp");
@@ -404,5 +453,25 @@ public class XptpConfig {
 
     public static int getLeaderboardRefreshSeconds() {
         return leaderboardRefreshSeconds;
+    }
+
+    public static boolean isHomeDistanceBased() {
+        return homeDistanceBased;
+    }
+
+    public static boolean isBackDistanceBased() {
+        return backDistanceBased;
+    }
+
+    public static boolean isDeathBackDistanceBased() {
+        return deathBackDistanceBased;
+    }
+
+    public static int getCooldownSeconds(String command) {
+        return cooldowns.getOrDefault(command.toLowerCase(), cooldownSeconds);
+    }
+
+    public static int getFlatCost(String command) {
+        return (int) Math.round(costs.getOrDefault(command.toLowerCase(), 10) * globalCostMultiplier);
     }
 }

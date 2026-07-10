@@ -105,9 +105,9 @@ public class WarpCommands {
         }
         TeleportLocation loc = info.getLocation();
 
-        if (!CooldownManager.checkCooldown(player)) return 0;
+        if (!CooldownManager.checkCooldown(player, "warp")) return 0;
 
-        int cost = Xptp.calculateXpCost(player, loc, false);
+        int cost = Xptp.calculateXpCost(player, loc, "warp", false);
         if (info.getCreatorUuid() != null && info.getCreatorUuid().equals(player.getUUID().toString())) {
             cost = (int) Math.round(cost * XptpConfig.getCreatorWarpCostMultiplier());
         }
@@ -119,7 +119,7 @@ public class WarpCommands {
             return 0;
         }
 
-        Xptp.performTeleport(player, loc, cost);
+        Xptp.performTeleport(player, player, loc, cost, "warp");
         return 1;
     }
 

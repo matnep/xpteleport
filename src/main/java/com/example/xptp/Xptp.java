@@ -48,9 +48,9 @@ public class Xptp {
         java.util.regex.Matcher matcher = WAYPOINT_PATTERN.matcher(raw);
         if (matcher.find()) {
             try {
-                int x = Integer.parseInt(matcher.group(4));
-                int y = Integer.parseInt(matcher.group(5));
-                int z = Integer.parseInt(matcher.group(6));
+                int x = Integer.parseInt(matcher.group(3));
+                int y = Integer.parseInt(matcher.group(4));
+                int z = Integer.parseInt(matcher.group(5));
 
                 // Append the clickable golden [Teleport] button
                 MutableComponent original = event.getMessage().copy();

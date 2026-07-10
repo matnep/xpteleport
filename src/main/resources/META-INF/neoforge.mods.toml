@@ -4,7 +4,7 @@ license="MIT"
 
 [[mods]]
 modId="xpteleport"
-version="1.1.1"
+version="1.2.1"
 displayName="XPTeleport"
 authors="Matnepp"
 description="Distance-based XP teleportation mod with anti-abuse systems."

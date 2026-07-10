@@ -46,69 +46,62 @@ The config file is generated automatically on launch with detailed comments plac
 
 ```json
 {
-  "//_global_cost_multiplier": "Master scale factor for all XP costs (teleports and buys). 2.0 = double, 0.5 = half.",
   "global_cost_multiplier": 1.0,
-  "//_costs": "Flat rates (in XP levels) charged for commands when distance_based_xp is set to false.",
   "costs": {
     "tpa": 10,
     "tpahere": 10,
     "tpaccept": 10,
-    "home": 10,
+    "home": 2,
     "warp": 10,
     "spawn": 10,
     "rtp": 10,
     "wild": 10,
     "back": 10,
+    "death_back": 2,
     "xaero_tp": 30
   },
-  "//_messages": "Customizable chat translation strings.",
   "messages": {
     "insufficient_xp": "§cYou do not have enough XP levels to teleport! (Cost: %s levels, Current: %s levels)",
     "xp_deducted": "§aTeleportation successful! Deducted %s XP levels.",
     "confirm_prompt": "§eYou are about to teleport to [%s, %s, %s] for %s XP levels."
   },
-  "//_redirect_tp_to_xtp": "Redirects non-OP /tp coordinate clicks to map confirm dialog.",
   "redirect_tp_to_xtp": true,
-  "//_max_homes": "Default home slots limit a player starts with before upgrades.",
   "max_homes": 5,
-  "//_buy_home_slot_cost": "Base XP cost to purchase 1 extra home slot above starting limit.",
   "buy_home_slot_cost": 15,
-  "//_buy_home_slot_multiplier": "Multiplier for subsequent home slot purchases (e.g. 1.5). Set to 1.0 for flat price.",
   "buy_home_slot_multiplier": 1.0,
-  "//_max_extra_home_slots": "Max extra home slots a player can buy.",
   "max_extra_home_slots": 5,
-  "//_buy_warp_cost": "XP cost for players to buy a global warp. Only the creator or OPs can delete it.",
   "buy_warp_cost": 50,
-  "//_creator_warp_cost_multiplier": "Cost multiplier applied when teleporting to a warp you created. Set to 0.0 for free of charge, or 0.5 for half price.",
   "creator_warp_cost_multiplier": 0.0,
-  "//_rtp_range": "Minimum and maximum block radius search range around spawn on /rtp.",
   "rtp_min_range": 50,
   "rtp_max_range": 500,
-  "//_distance_based_xp": "Calculate XP cost dynamically based on distance. If false, falls back to flat rates in 'costs'.",
   "distance_based_xp": true,
-  "//_use_logarithmic_cost": "Use logarithmic distance scaling. If true, uses logarithmic formula (100 blocks = 5 levels). If false, uses blocks_per_level.",
   "use_logarithmic_cost": true,
-  "//_log_formula": "Formula parameters: cost = base + multiplier * ln(distance). Calibrated to 100 blocks = 5 levels.",
   "base_teleport_cost": -19.3,
   "log_multiplier": 5.28,
-  "//_xaero_multiplier": "Cost multiplier applied to Xaero map clicks and shared chat waypoints (e.g. 3.0 = triple cost).",
   "xaero_multiplier": 3.0,
-  "//_blocks_per_level": "Linear cost scaling divisor (used if use_logarithmic_cost is false).",
   "blocks_per_level": 500,
-  "//_cross_dimension_cost": "Flat XP level cost charged for teleports across dimensions.",
   "cross_dimension_cost": 15,
-  "//_warmup_seconds": "Delay in seconds where a player must stand still and take no damage before teleporting.",
   "warmup_seconds": 3,
-  "//_cooldown_seconds": "Delay in seconds between successful teleports. Set to 0 to disable cooldowns.",
   "cooldown_seconds": 0,
-  "//_show_ops_on_leaderboard": "Set to true to show server operators (OPs) on the XP leaderboard.",
   "show_ops_on_leaderboard": false,
-  "//_tpa_request_timeout_seconds": "Time in seconds before a pending TPA request expires.",
   "tpa_request_timeout_seconds": 60,
-  "//_xaero_confirm_timeout_seconds": "Time in seconds before a pending Xaero coordinate teleport confirmation expires.",
   "xaero_confirm_timeout_seconds": 30,
-  "//_leaderboard_refresh_seconds": "Time in seconds between automatic background refreshes of the XP leaderboard.",
-  "leaderboard_refresh_seconds": 300
+  "leaderboard_refresh_seconds": 300,
+  "home_distance_based": false,
+  "back_distance_based": true,
+  "death_back_distance_based": false,
+  "cooldowns": {
+    "tpa": 0,
+    "tpahere": 0,
+    "tpaccept": 0,
+    "home": 60,
+    "warp": 0,
+    "spawn": 0,
+    "rtp": 120,
+    "wild": 120,
+    "back": 0,
+    "death_back": 0
+  }
 }
 ```
 
@@ -117,7 +110,7 @@ The config file is generated automatically on launch with detailed comments plac
 ## 💬 Commands Reference
 
 ### XP Leaderboard
-*   **`/xp leaderboard`** *(alias: `/xpteleport leaderboard`)*: Displays a chat leaderboard showing the top 10 players on the server ranked by total experience points. (By default, OP players are hidden unless `"show_ops_on_leaderboard": true` is enabled in configuration).
+*   **`/xpteleport leaderboard`**: Displays a chat leaderboard showing the top 10 players on the server ranked by XP levels. Output is formatted as a clean plain-text list (`rank. PlayerName levelslevels`) with no color codes or total XP.
 
 ### XP Trading
 *   **`/xpgive <player> <levels>`** *(alias: `/xpg`)*: Gives XP levels from your bar to another player. (OPs can give infinite levels without losing XP).
@@ -129,12 +122,13 @@ The config file is generated automatically on launch with detailed comments plac
 *   **`/buywarp <name>`**: Spend a premium fee of XP levels to create a global community warp. The warp is owned by you. Only you (or OPs) can delete it, and you get to teleport to your warp for free (configurable).
 
 ### Teleportation
-*   **`/tpa <player>`** / **`/tpahere <player>`**: Coordinate requests to/from players.
+*   **`/tpa <player>`**: Request to teleport to a player's location.
+*   **`/tpahere <player>`**: Request a player to teleport to your location. When they accept, you (the summoning requester) pay the XP cost, and they perform the stand-still warmup.
 *   **`/tpaccept`** / **`/tpdeny`** / **`/tpcancel`**: Accept, deny, or cancel active TPA requests.
-*   **`/sethome [name]`** / **`/home [name]`** / **`/delhome [name]`** / **`/listhomes`**: Personal warp points. Obeys standard limits plus purchased home slots.
+*   **`/sethome [name]`** / **`/home [name]`** / **`/delhome [name]`** / **`/listhomes`**: Personal warp points. Obeys standard limits plus purchased home slots. Charges a flat rate of 2 XP levels by default.
 *   **`/warp <name>`** / **`/listwarps`** / **`/setwarp <name>`** / **`/delwarp <name>`**: Global server warps. Standard `/delwarp` is only usable by OPs or the creator of the warp.
-*   **`/spawn`** / **`/back`**: Basic utilities.
-*   **`/rtp`** *(alias: `/wild`)*: Runs a **100% Asynchronous safe terrain search** in the background, checking up to 15 locations before finding solid ground to teleport. Completely lag-free.
+*   **`/spawn`** / **`/back`**: Basic utilities. Going `/back` after death charges a flat rate of 2 XP levels by default. Regular `/back` charges based on distance.
+*   **`/rtp`** *(alias: `/wild`)*: Runs a **100% Asynchronous safe terrain search** in the background, checking up to 15 locations before finding solid ground to teleport. Completely lag-free. Charges a flat rate of 10 XP levels.
 *   **`/xtp <coords>`** / **`/xtp confirm`**: Custom coordinates confirmation endpoint.
 
 ### Administration

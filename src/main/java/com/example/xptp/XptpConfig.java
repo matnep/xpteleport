@@ -54,7 +54,7 @@ public class XptpConfig {
     // Flat cost and cooldown options
     private static boolean homeDistanceBased = false;
     private static boolean backDistanceBased = true;
-    private static boolean deathBackDistanceBased = true;
+    private static boolean deathBackDistanceBased = false;
     private static final Map<String, Integer> cooldowns = new HashMap<>();
 
     static {

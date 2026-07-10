@@ -68,7 +68,7 @@ public class XptpConfig {
         costs.put("rtp", 10);
         costs.put("wild", 10);
         costs.put("back", 10);
-        costs.put("death_back", 10);
+        costs.put("death_back", 2);
         costs.put("xaero_tp", 30);
 
         cooldowns.put("tpa", 0);
